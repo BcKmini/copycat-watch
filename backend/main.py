@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import subprocess
 from datetime import date
@@ -16,14 +17,7 @@ load_dotenv()
 DEMO_DIR = os.path.join(os.path.dirname(__file__), "demo_data")
 SIMILARITY_THRESHOLD = 35  # 이 이상만 '도용 의심'으로 표시 (실사 기반 데모 데이터로 튜닝한 값)
 
-FAKE_LISTINGS = {
-    "soap01_copied_shopA.png": {"shop": "OO마켓 셀러 미소상회", "price": "8,900원", "note": "원가보다 30% 저렴하게 판매 중"},
-    "soap01_copied_shopB.png": {"shop": "스마트스토어 데일리샵", "price": "9,500원", "note": "워터마크 붙여 재판매"},
-    "candle01_copied_shopA.png": {"shop": "OO마켓 홈라이프", "price": "11,000원", "note": "상세페이지 사진 그대로 도용"},
-    "candle01_copied_shopB.png": {"shop": "인스타 공동구매 계정", "price": "10,500원", "note": "SNS에서 재판매 중"},
-    "tote01_copied_shopA.png": {"shop": "OO마켓 에코라이프", "price": "6,900원", "note": "제품명만 바꿔서 등록"},
-    "tote01_copied_shopB.png": {"shop": "스마트스토어 그린데일리", "price": "7,200원", "note": "동일 사진 좌우반전 후 사용"},
-}
+_listings: dict[str, dict] = {}
 
 app = FastAPI(title="Copycat Watch API")
 
@@ -45,6 +39,12 @@ def _load_demo_hashes():
         if fname.lower().endswith(".png"):
             path = os.path.join(DEMO_DIR, fname)
             _demo_hashes[fname] = imagehash.phash(Image.open(path))
+
+    _listings.clear()
+    metadata_path = os.path.join(DEMO_DIR, "metadata.json")
+    if os.path.isfile(metadata_path):
+        with open(metadata_path, encoding="utf-8") as f:
+            _listings.update(json.load(f))
 
 
 @app.on_event("startup")
@@ -76,7 +76,7 @@ async def scan(file: UploadFile = File(...)):
         distance = int(min(query_hash - h, query_flip_hash - h))
         similarity = round(max(0, 100 - distance * 3), 1)
         if similarity >= SIMILARITY_THRESHOLD:
-            listing = FAKE_LISTINGS.get(fname, {"shop": "알 수 없는 판매처", "price": "-", "note": ""})
+            listing = _listings.get(fname, {"shop": "알 수 없는 판매처", "price": "-", "note": ""})
             matches.append({
                 "file": fname,
                 "similarity": similarity,

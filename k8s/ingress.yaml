@@ -2,10 +2,10 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: copycat-ingress
-  annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
 spec:
-  ingressClassName: nginx
+  # k3d/k3s는 traefik이 기본 ingress controller. 다른 클러스터(NHN NKS 등)로 옮길 땐
+  # nginx-ingress를 설치하고 ingressClassName을 nginx로 바꿔주면 된다.
+  ingressClassName: traefik
   rules:
     - http:
         paths:

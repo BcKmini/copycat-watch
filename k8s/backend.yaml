@@ -14,7 +14,8 @@ spec:
     spec:
       containers:
         - name: backend
-          image: copycat-backend:latest
+          image: copycat-watch-backend:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
           envFrom:

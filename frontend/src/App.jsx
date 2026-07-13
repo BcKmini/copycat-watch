@@ -1,12 +1,36 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+
+const STEPS = ['상품 등록', '스캔 결과', '신고서 초안']
+
+function Spinner() {
+  return <span className="spinner" aria-hidden="true" />
+}
+
+function StepIndicator({ step }) {
+  return (
+    <ol className="steps">
+      {STEPS.map((label, i) => {
+        const n = i + 1
+        const state = n === step ? 'active' : n < step ? 'done' : ''
+        return (
+          <li key={label} className={state}>
+            <span className="step-dot">{n < step ? '✓' : n}</span>
+            <span className="step-label">{label}</span>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
 
 function App() {
   const [step, setStep] = useState(1)
   const [file, setFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [isDragging, setIsDragging] = useState(false)
   const [productName, setProductName] = useState('')
   const [sellerName, setSellerName] = useState('')
   const [matches, setMatches] = useState([])
@@ -14,13 +38,22 @@ function App() {
   const [report, setReport] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+  const fileInputRef = useRef(null)
 
-  const handleFileChange = (e) => {
-    const f = e.target.files[0]
-    if (!f) return
+  const applyFile = (f) => {
+    if (!f || !f.type.startsWith('image/')) return
     setFile(f)
     setPreviewUrl(URL.createObjectURL(f))
   }
+
+  const handleFileChange = (e) => applyFile(e.target.files[0])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    setIsDragging(false)
+    applyFile(e.dataTransfer.files[0])
+  }, [])
 
   const runScan = async () => {
     if (!file || !productName) {
@@ -71,6 +104,12 @@ function App() {
     }
   }
 
+  const copyReport = () => {
+    navigator.clipboard.writeText(report)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
+
   const reset = () => {
     setStep(1)
     setFile(null)
@@ -83,16 +122,17 @@ function App() {
     setError('')
   }
 
+  const severity = (similarity) => (similarity >= 60 ? 'high' : 'mid')
+
   return (
     <div className="page">
       <header className="app-header">
-        <h1>카피캣 워치</h1>
+        <div className="brand">
+          <span className="brand-mark">CW</span>
+          <span className="brand-name">카피캣 워치</span>
+        </div>
         <p className="subtitle">내 상품 사진이 무단 도용됐는지 AI가 찾아드립니다</p>
-        <ol className="steps">
-          <li className={step === 1 ? 'active' : step > 1 ? 'done' : ''}>1. 상품 등록</li>
-          <li className={step === 2 ? 'active' : step > 2 ? 'done' : ''}>2. 스캔 결과</li>
-          <li className={step === 3 ? 'active' : ''}>3. 신고서 초안</li>
-        </ol>
+        <StepIndicator step={step} />
       </header>
 
       {error && <div className="error-banner">{error}</div>}
@@ -100,6 +140,8 @@ function App() {
       {step === 1 && (
         <section className="card">
           <h2>내 상품 정보를 입력해줘</h2>
+          <p className="card-desc">사진 한 장이면 AI가 유사 이미지를 찾아 신고서까지 만들어줘요.</p>
+
           <label className="field">
             상품명
             <input
@@ -110,7 +152,7 @@ function App() {
             />
           </label>
           <label className="field">
-            판매자명 (선택)
+            판매자명 <span className="optional">(선택)</span>
             <input
               type="text"
               placeholder="예: 박사장"
@@ -118,13 +160,40 @@ function App() {
               onChange={(e) => setSellerName(e.target.value)}
             />
           </label>
-          <label className="field">
-            상품 사진
-            <input type="file" accept="image/*" onChange={handleFileChange} />
-          </label>
-          {previewUrl && <img src={previewUrl} alt="미리보기" className="preview" />}
+
+          <span className="field-label">상품 사진</span>
+          <div
+            className={`dropzone ${isDragging ? 'dragging' : ''} ${previewUrl ? 'has-file' : ''}`}
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault()
+              setIsDragging(true)
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              hidden
+            />
+            {previewUrl ? (
+              <img src={previewUrl} alt="미리보기" className="preview" />
+            ) : (
+              <div className="dropzone-hint">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" />
+                  <path d="M12 3v12M12 3l4 4M12 3 8 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span>클릭하거나 이미지를 끌어다 놓으세요</span>
+              </div>
+            )}
+          </div>
+
           <button className="primary" onClick={runScan} disabled={loading}>
-            {loading ? '스캔 중...' : 'AI로 도용 스캔하기'}
+            {loading ? <><Spinner /> 스캔 중...</> : 'AI로 도용 스캔하기'}
           </button>
         </section>
       )}
@@ -133,19 +202,27 @@ function App() {
         <section className="card">
           <h2>스캔 결과</h2>
           {matches.length === 0 ? (
-            <p className="empty">유사한 도용 사례가 발견되지 않았어요.</p>
+            <div className="empty">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+              <p>유사한 도용 사례가 발견되지 않았어요.</p>
+            </div>
           ) : (
             <ul className="match-list">
               {matches.map((m) => (
                 <li key={m.file} className="match-item">
                   <div className="match-info">
-                    <span className="similarity">유사도 {m.similarity}%</span>
+                    <span className={`badge badge-${severity(m.similarity)}`}>
+                      유사도 {m.similarity}%
+                    </span>
                     <strong>{m.shop}</strong>
                     <span className="note">{m.note}</span>
                     <span className="price">판매가 {m.price}</span>
                   </div>
                   <button className="secondary" onClick={() => runReport(m)} disabled={loading}>
-                    {loading && selectedMatch?.file === m.file ? '생성 중...' : '신고서 작성'}
+                    {loading && selectedMatch?.file === m.file ? <Spinner /> : '신고서 작성'}
                   </button>
                 </li>
               ))}
@@ -158,16 +235,18 @@ function App() {
       {step === 3 && (
         <section className="card">
           <h2>신고서 초안</h2>
+          <p className="card-desc">플랫폼 신고 사유서와 내용증명 초안이에요. 필요한 부분을 수정해서 사용하세요.</p>
           <pre className="report-box">{report}</pre>
-          <button
-            className="secondary"
-            onClick={() => navigator.clipboard.writeText(report)}
-          >
-            복사하기
-          </button>
-          <button className="ghost" onClick={reset}>처음으로</button>
+          <div className="button-row">
+            <button className="secondary" onClick={copyReport}>
+              {copied ? '복사됨' : '복사하기'}
+            </button>
+            <button className="ghost" onClick={reset}>처음으로</button>
+          </div>
         </section>
       )}
+
+      <footer className="app-footer">K-AI 콘텐츠 공모전 · 카피캣 워치</footer>
     </div>
   )
 }
