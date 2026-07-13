@@ -20,8 +20,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 
-from matching import SIMILARITY_THRESHOLD, query_hashes, similarity_from_hashes
-import imagehash
+from matching import SIMILARITY_THRESHOLD, candidate_hashes, query_hashes, similarity_from_hashes
 
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "dataset")
 ORIG_DIR = os.path.join(DATASET_DIR, "originals")
@@ -66,17 +65,17 @@ def main():
         products.append({"pid": pid, "query": entry["query"], "orig_path": orig_path, "variants": variants})
 
     # 모든 후보(변형본)의 해시를 미리 계산
-    candidate_hashes = {}
+    candidate_hash_map = {}
     for p in products:
         for shop, path in p["variants"].items():
-            candidate_hashes[f"{p['pid']}_{shop}"] = imagehash.phash(Image.open(path))
+            candidate_hash_map[f"{p['pid']}_{shop}"] = candidate_hashes(Image.open(path).convert("RGB"))
 
     # 쿼리(원본)마다 전체 후보와 비교
     pair_results = []  # (similarity, is_true_positive)
     for p in products:
-        qhash, qflip = query_hashes(Image.open(p["orig_path"]).convert("RGB"))
-        for cand_key, chash in candidate_hashes.items():
-            similarity = similarity_from_hashes(qhash, qflip, chash)
+        qhash, qflip, qcolor = query_hashes(Image.open(p["orig_path"]).convert("RGB"))
+        for cand_key, (chash, ccolor) in candidate_hash_map.items():
+            similarity = similarity_from_hashes(qhash, qflip, qcolor, chash, ccolor)
             is_same_product = cand_key.startswith(f"{p['pid']}_")
             pair_results.append({
                 "query": p["pid"],

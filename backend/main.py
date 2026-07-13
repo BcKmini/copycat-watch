@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse
 from PIL import Image
 from pydantic import BaseModel
 
-from matching import SIMILARITY_THRESHOLD, query_hashes, similarity_from_hashes
+from matching import SIMILARITY_THRESHOLD, candidate_hashes, query_hashes, similarity_from_hashes
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -47,7 +47,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_demo_hashes: dict[str, imagehash.ImageHash] = {}
+_demo_hashes: dict[str, tuple[imagehash.ImageHash, imagehash.ImageHash]] = {}
 
 
 def _load_demo_hashes():
@@ -57,7 +57,7 @@ def _load_demo_hashes():
     for fname in os.listdir(DEMO_DIR):
         if fname.lower().endswith(".png"):
             path = os.path.join(DEMO_DIR, fname)
-            _demo_hashes[fname] = imagehash.phash(Image.open(path))
+            _demo_hashes[fname] = candidate_hashes(Image.open(path).convert("RGB"))
 
     _listings.clear()
     metadata_path = os.path.join(DEMO_DIR, "metadata.json")
@@ -170,13 +170,15 @@ def _scan_web(content: bytes) -> dict | None:
 
 
 def _scan_demo(query_img: Image.Image) -> list[dict]:
-    query_hash, query_flip_hash = query_hashes(query_img)
+    query_hash, query_flip_hash, query_color_hash = query_hashes(query_img)
 
     matches = []
-    for fname, h in _demo_hashes.items():
+    for fname, (cand_hash, cand_color_hash) in _demo_hashes.items():
         if "original" in fname or "unrelated" in fname:
             continue
-        similarity = similarity_from_hashes(query_hash, query_flip_hash, h)
+        similarity = similarity_from_hashes(
+            query_hash, query_flip_hash, query_color_hash, cand_hash, cand_color_hash
+        )
         if similarity >= SIMILARITY_THRESHOLD:
             listing = _listings.get(fname, {"shop": "알 수 없는 판매처", "price": "-", "note": ""})
             matches.append({
@@ -202,6 +204,9 @@ async def scan(file: UploadFile = File(...)):
         raise HTTPException(413, "이미지 용량이 너무 커요 (최대 10MB)")
     try:
         query_img = Image.open(io.BytesIO(content))
+        query_img.load()  # PIL은 open()에서 헤더만 읽고 실제 픽셀 디코딩은 미루기 때문에,
+        # 잘린(truncated) 파일은 여기서 강제로 디코딩해서 미리 걸러낸다
+        query_img = query_img.convert("RGB")
     except Exception:
         raise HTTPException(400, "이미지 파일을 읽을 수 없습니다")
 
