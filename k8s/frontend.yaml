@@ -23,6 +23,13 @@ spec:
               value: copycat-backend
             - name: BACKEND_PORT
               value: "8000"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
           readinessProbe:
             httpGet:
               path: /

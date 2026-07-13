@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import logging
 import os
 import re
 import subprocess
@@ -19,9 +20,12 @@ from pydantic import BaseModel
 from matching import SIMILARITY_THRESHOLD, query_hashes, similarity_from_hashes
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("copycat-watch")
 
 DEMO_DIR = os.path.join(os.path.dirname(__file__), "demo_data")
 ASSUMED_MONTHLY_SALES = 20  # 예상 피해액 계산용 가정치 (데모 - 실제 서비스에선 플랫폼 판매지수 연동 필요)
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10MB
 
 
 def _parse_price(price_str: str) -> int:
@@ -100,7 +104,8 @@ def _scan_web(content: bytes) -> dict | None:
         )
         resp.raise_for_status()
         web = resp.json()["responses"][0].get("webDetection", {})
-    except Exception:
+    except Exception as e:
+        logger.warning("Vision API 호출 실패, 데모 매칭으로 폴백: %s", e)
         return None
 
     full_match_urls = {img.get("url") for img in web.get("fullMatchingImages", [])}
@@ -193,6 +198,8 @@ def _scan_demo(query_img: Image.Image) -> list[dict]:
 @app.post("/api/scan")
 async def scan(file: UploadFile = File(...)):
     content = await file.read()
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "이미지 용량이 너무 커요 (최대 10MB)")
     try:
         query_img = Image.open(io.BytesIO(content))
     except Exception:

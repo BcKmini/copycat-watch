@@ -99,6 +99,7 @@ function App() {
           previewUrl,
           matches: data.matches,
           scanMode: data.mode,
+          aiLabel: data.label ?? null,
           timestamp: new Date().toLocaleString('ko-KR'),
         },
         ...prev,
@@ -177,7 +178,7 @@ function App() {
     setPreviewUrl(entry.previewUrl)
     setMatches(entry.matches)
     setScanMode(entry.scanMode)
-    setAiLabel(null)
+    setAiLabel(entry.aiLabel ?? null)
     setMinSimilarity(0)
     setStep(2)
     setHistoryOpen(false)
@@ -191,7 +192,7 @@ function App() {
   }
 
   const visibleMatches = matches.filter((m) => m.similarity >= minSimilarity)
-  const totalDamage = matches.reduce((sum, m) => sum + (m.estimated_damage ?? 0), 0)
+  const totalDamage = visibleMatches.reduce((sum, m) => sum + (m.estimated_damage ?? 0), 0)
 
   return (
     <div className="page">
@@ -335,14 +336,14 @@ function App() {
           {aiLabel && (
             <p className="card-desc">AI가 인식한 상품 종류: <strong>{aiLabel}</strong></p>
           )}
-          {matches.length > 0 && (
+          {visibleMatches.length > 0 && (
             <div className="stats-bar">
               <div className="stat">
-                <span className="stat-value">{matches.length}건</span>
+                <span className="stat-value">{visibleMatches.length}건</span>
                 <span className="stat-label">발견된 도용 의심</span>
               </div>
               <div className="stat">
-                <span className="stat-value">{Math.round(matches[0]?.similarity ?? 0)}%</span>
+                <span className="stat-value">{Math.round(visibleMatches[0]?.similarity ?? 0)}%</span>
                 <span className="stat-label">최고 유사도</span>
               </div>
               {totalDamage > 0 && (
