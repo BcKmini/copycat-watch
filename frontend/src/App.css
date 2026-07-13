@@ -767,15 +767,6 @@ button:disabled {
   flex-wrap: wrap;
 }
 
-.dashboard-stats {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.dashboard-stats .stat {
-  background: var(--bg);
-}
 
 .match-thumb {
   cursor: pointer;

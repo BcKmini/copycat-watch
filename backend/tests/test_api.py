@@ -190,3 +190,40 @@ def test_batch_report_combines_multiple_matches(client, monkeypatch):
 def test_batch_report_rejects_empty_matches(client):
     resp = client.post("/api/report/batch", json={"product_name": "테스트 상품", "matches": []})
     assert resp.status_code == 400
+
+
+def _match(url, sim=90.0, verified=True, shop="같은 사이트"):
+    return {
+        "file": url, "similarity": sim, "shop": shop, "price": "-", "note": "",
+        "image_url": None, "estimated_damage": None, "source_url": url,
+        "source": "web", "verified": verified,
+    }
+
+
+def test_dedupe_merges_same_page_different_scheme_and_www():
+    matches = [
+        _match("http://www.example.com/post/1"),
+        _match("https://example.com/post/1/"),
+    ]
+    result = main._dedupe_matches(matches)
+    assert len(result) == 1
+
+
+def test_dedupe_keeps_verified_over_unverified_duplicate():
+    matches = [
+        _match("https://example.com/post/1", sim=70.0, verified=False),
+        _match("https://example.com/post/1", sim=70.0, verified=True),
+    ]
+    result = main._dedupe_matches(matches)
+    assert len(result) == 1
+    assert result[0]["verified"] is True
+
+
+def test_dedupe_keeps_distinct_pages():
+    matches = [
+        _match("https://example.com/post/1"),
+        _match("https://example.com/post/2"),
+        _match("https://another-site.com/post/1"),
+    ]
+    result = main._dedupe_matches(matches)
+    assert len(result) == 3
