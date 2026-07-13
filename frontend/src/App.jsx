@@ -11,12 +11,6 @@ const FEATURES = [
   { title: 'AI 신고서 3종', desc: '사유서·내용증명·손해배상 청구서를 한번에' },
 ]
 
-const ROADMAP = [
-  '다중 이미지 업로드로 스캔 정확도 향상',
-  '정기 자동 모니터링 및 이메일 알림',
-  '플랫폼 신고 API 자동 연동',
-]
-
 function Spinner() {
   return <span className="spinner" aria-hidden="true" />
 }
@@ -155,6 +149,12 @@ function App() {
     a.download = `${productName || '신고서'}_카피캣워치.txt`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const goBackToResults = () => {
+    setStep(2)
+    setReport('')
+    setError('')
   }
 
   const reset = () => {
@@ -305,15 +305,6 @@ function App() {
               {loading ? <><Spinner /> 스캔 중...</> : 'AI로 도용 스캔하기'}
             </button>
           </section>
-
-          <div className="roadmap">
-            <span className="roadmap-label">다음 업데이트 예정</span>
-            <ul>
-              {ROADMAP.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
         </>
       )}
 
@@ -458,12 +449,13 @@ function App() {
             <button className="secondary" onClick={downloadReport}>
               다운로드
             </button>
+            <button className="ghost" onClick={goBackToResults}>← 결과로 돌아가기</button>
             <button className="ghost" onClick={reset}>처음으로</button>
           </div>
         </section>
       )}
 
-      <footer className="app-footer">K-AI 콘텐츠 공모전 · 카피캣 워치</footer>
+      <footer className="app-footer">카피캣 워치</footer>
 
       {compareMatch && (
         <div className="lightbox" onClick={() => setCompareMatch(null)}>
@@ -486,6 +478,17 @@ function App() {
                 )}
               </div>
             </div>
+            <button
+              className="primary"
+              onClick={() => {
+                const match = compareMatch
+                setCompareMatch(null)
+                runReport(match)
+              }}
+              disabled={loading}
+            >
+              이 결과로 신고서 작성
+            </button>
           </div>
         </div>
       )}

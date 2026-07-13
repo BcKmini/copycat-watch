@@ -139,23 +139,27 @@ def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
         logger.warning("Vision API 호출 실패, 데모 매칭으로 폴백: %s", e)
         return None
 
-    # 1단계: 후보 수집 (페이지 우선, 게시처 미확인 이미지는 보조)
+    # 1단계: 후보 수집. Vision이 그 페이지에서 실제로 매칭 이미지를 찾아준 경우만
+    # 후보로 삼는다 - 이미지 근거 없이 "관련 있어 보이는 페이지"만 있는 건
+    # 신뢰도가 너무 낮아서(제목만 비슷한 무관한 페이지가 섞임) 아예 제외한다.
     candidates = []
     seen_urls = set()
     for page in web.get("pagesWithMatchingImages", []):
         page_url = page.get("url")
         if not page_url or page_url in seen_urls:
             continue
-        seen_urls.add(page_url)
         page_full = page.get("fullMatchingImages", [])
         page_partial = page.get("partialMatchingImages", [])
-        thumb = (page_full or page_partial or [{}])[0].get("url")
+        if not page_full and not page_partial:
+            continue  # 이미지 근거 없는 페이지는 노이즈이므로 제외
+        seen_urls.add(page_url)
+        thumb = (page_full or page_partial)[0].get("url")
         candidates.append({
             "key": page_url,
             "title": page.get("pageTitle") or page_url,
             "image_url": thumb,
             "source_url": page_url,
-            "tier": "full" if page_full else ("partial" if page_partial else "page"),
+            "tier": "full" if page_full else "partial",
         })
     for img in web.get("visuallySimilarImages", [])[:8]:
         img_url = img.get("url")
@@ -178,11 +182,10 @@ def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
         ))
 
     # 검증 불가(이미지 다운로드 차단 등) 시 Vision 등급 기반 보수적 점수로 폴백
-    TIER_FALLBACK = {"full": 85.0, "partial": 60.0, "page": 45.0, "similar": 0.0}
+    TIER_FALLBACK = {"full": 85.0, "partial": 60.0, "similar": 0.0}
     TIER_NOTE = {
         "full": "웹에서 동일 이미지가 게시된 페이지",
         "partial": "웹에서 변형(크롭 등)된 이미지가 게시된 페이지",
-        "page": "웹에서 관련 이미지가 게시된 페이지",
         "similar": "게시 페이지를 특정하지 못한 유사 이미지",
     }
 
