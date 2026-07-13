@@ -34,11 +34,13 @@ function App() {
   const [productName, setProductName] = useState('')
   const [sellerName, setSellerName] = useState('')
   const [matches, setMatches] = useState([])
+  const [scanMode, setScanMode] = useState(null)
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [report, setReport] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const [platform, setPlatform] = useState('오픈마켓 일반')
   const fileInputRef = useRef(null)
 
   const applyFile = (f) => {
@@ -69,6 +71,7 @@ function App() {
       if (!res.ok) throw new Error('스캔 요청 실패')
       const data = await res.json()
       setMatches(data.matches)
+      setScanMode(data.mode)
       setStep(2)
     } catch (err) {
       setError(err.message)
@@ -91,6 +94,9 @@ function App() {
           match_shop: match.shop,
           match_note: match.note,
           similarity: match.similarity,
+          platform,
+          source_url: match.source_url ?? null,
+          estimated_damage: match.estimated_damage ?? null,
         }),
       })
       if (!res.ok) throw new Error('신고서 생성 실패')
@@ -117,12 +123,19 @@ function App() {
     setProductName('')
     setSellerName('')
     setMatches([])
+    setScanMode(null)
     setSelectedMatch(null)
     setReport('')
     setError('')
+    setPlatform('오픈마켓 일반')
   }
 
   const severity = (similarity) => (similarity >= 60 ? 'high' : 'mid')
+
+  const resolveImageUrl = (url) => {
+    if (!url) return null
+    return url.startsWith('http') ? url : `${API_BASE}${url}`
+  }
 
   return (
     <div className="page">
@@ -200,7 +213,20 @@ function App() {
 
       {step === 2 && (
         <section className="card">
-          <h2>스캔 결과</h2>
+          <div className="card-header-row">
+            <h2>스캔 결과</h2>
+            {scanMode && (
+              <span className={`mode-badge mode-${scanMode}`}>
+                {scanMode === 'web' ? '실시간 웹 검색' : '데모 데이터 검색'}
+              </span>
+            )}
+          </div>
+          {scanMode === 'demo' && (
+            <p className="card-desc">
+              Google Vision API 키가 설정되지 않아 데모 데이터셋 안에서만 찾은 결과예요.
+              실제 웹 검색을 켜려면 백엔드에 GOOGLE_VISION_API_KEY를 설정하세요.
+            </p>
+          )}
           {matches.length === 0 ? (
             <div className="empty">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
@@ -210,23 +236,51 @@ function App() {
               <p>유사한 도용 사례가 발견되지 않았어요.</p>
             </div>
           ) : (
-            <ul className="match-list">
-              {matches.map((m) => (
-                <li key={m.file} className="match-item">
-                  <div className="match-info">
-                    <span className={`badge badge-${severity(m.similarity)}`}>
-                      유사도 {m.similarity}%
-                    </span>
-                    <strong>{m.shop}</strong>
-                    <span className="note">{m.note}</span>
-                    <span className="price">판매가 {m.price}</span>
-                  </div>
-                  <button className="secondary" onClick={() => runReport(m)} disabled={loading}>
-                    {loading && selectedMatch?.file === m.file ? <Spinner /> : '신고서 작성'}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <label className="field platform-field">
+                신고 대상 플랫폼
+                <select value={platform} onChange={(e) => setPlatform(e.target.value)}>
+                  <option>오픈마켓 일반</option>
+                  <option>스마트스토어</option>
+                  <option>쿠팡</option>
+                  <option>인스타그램</option>
+                  <option>기타 SNS</option>
+                </select>
+              </label>
+              <ul className="match-list">
+                {matches.map((m) => (
+                  <li key={m.file} className="match-item">
+                    {m.image_url && (
+                      <img className="match-thumb" src={resolveImageUrl(m.image_url)} alt="" />
+                    )}
+                    <div className="match-info">
+                      <span className={`badge badge-${severity(m.similarity)}`}>
+                        유사도 {m.similarity}%
+                      </span>
+                      <strong>{m.shop}</strong>
+                      <span className="note">{m.note}</span>
+                      {m.price !== '-' && <span className="price">판매가 {m.price}</span>}
+                      {m.estimated_damage != null && (
+                        <span className="damage">예상 피해액 {m.estimated_damage.toLocaleString()}원</span>
+                      )}
+                      {m.source_url && (
+                        <a
+                          className="source-link"
+                          href={m.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          게시물 바로가기 ↗
+                        </a>
+                      )}
+                    </div>
+                    <button className="secondary" onClick={() => runReport(m)} disabled={loading}>
+                      {loading && selectedMatch?.file === m.file ? <Spinner /> : '신고서 작성'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
           <button className="ghost" onClick={reset}>처음으로</button>
         </section>
