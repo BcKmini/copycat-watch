@@ -89,7 +89,7 @@ def demo_image(fname: str):
 FETCH_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) CopycatWatch/1.0"}
 VERIFY_TIMEOUT = 5  # 후보 이미지 1장 다운로드 제한시간(초)
 VERIFY_MAX_BYTES = 5 * 1024 * 1024  # 후보 이미지 최대 크기
-VERIFY_WORKERS = 32
+VERIFY_WORKERS = 12  # 동시 디코딩 메모리 피크 제한 (OOM 방지)
 WEB_RESULT_LIMIT = 50
 PAGE_TIMEOUT = 8  # 페이지 HTML 다운로드 제한시간(초)
 PAGE_MAX_BYTES = 2 * 1024 * 1024  # 페이지 HTML 최대 크기
@@ -115,8 +115,15 @@ def _verify_candidate_image(query_h, url: str) -> float | None:
         if len(data) > VERIFY_MAX_BYTES:
             return None
         img = Image.open(io.BytesIO(data))
+        if img.width * img.height > 25_000_000:
+            return None  # 25MP 초과 초대형 이미지는 디코딩 자체가 메모리 폭탄이라 스킵
+        # 해시는 어차피 32x32로 축소해 계산하므로 저해상도 디코딩해도 결과가 같다.
+        # draft는 JPEG를 디코딩 단계에서 축소해 메모리 사용을 수십 배 줄인다 (OOM 방지).
+        img.draft("RGB", (512, 512))
         img.load()
-        chash, ccolor = candidate_hashes(img.convert("RGB"))
+        img = img.convert("RGB")
+        img.thumbnail((512, 512))
+        chash, ccolor = candidate_hashes(img)
         return similarity_from_hashes(query_h[0], query_h[1], query_h[2], chash, ccolor)
     except Exception:
         return None
@@ -320,8 +327,12 @@ def _scan_demo(query_img: Image.Image) -> list[dict]:
 
 
 @app.post("/api/scan")
-async def scan(file: UploadFile = File(...)):
-    content = await file.read()
+def scan(file: UploadFile = File(...)):
+    # 주의: async def로 만들면 안 된다 - _scan_web의 블로킹 작업(외부 이미지 수십 장
+    # 다운로드)이 이벤트 루프를 통째로 막아서, 스캔 중 /health가 응답 못 해
+    # k8s liveness가 팟을 죽인다(502의 원인이었음). sync def는 FastAPI가
+    # 워커 스레드에서 실행하므로 이벤트 루프가 계속 살아있다.
+    content = file.file.read()
     if len(content) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "이미지 용량이 너무 커요 (최대 10MB)")
     try:
