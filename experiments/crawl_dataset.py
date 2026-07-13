@@ -21,6 +21,22 @@ QUERIES = [
     "wooden cutting board", "knit doll", "scented diffuser", "linen apron", "beaded necklace",
     "silver ring", "leather bracelet", "crossbody bag", "printed t-shirt", "wooden coaster",
     "glass vase", "rattan basket", "macrame plant hanger", "calligraphy postcard", "hair clip",
+    "lip balm", "shampoo bar", "wooden comb", "natural loofah", "cotton dish towel",
+    "linen napkin", "rattan tray", "wooden clock", "leather passport holder", "mini crossbody bag",
+    "fabric pencil case", "fabric pouch", "knit scarf", "knit gloves", "patchwork cushion",
+    "beeswax wrap", "bamboo toothbrush", "glass diffuser bottle", "ceramic plate set", "cotton apron",
+    "leather business card holder", "wooden tray set", "rattan lampshade", "ceramic candle holder", "soy wax melt",
+    "handmade earrings", "beaded bracelet", "leather watch strap", "fabric book cover", "linen pouch",
+    "wooden stamp", "natural essential oil", "granola bar", "drip coffee bag", "homemade jam",
+    "fermented vinegar", "wooden spoon rest", "rattan coaster", "leather keychain", "fabric coaster",
+    "ceramic soap dish", "mini wood tray", "mosquito repellent spray", "handmade room spray", "knit pouch",
+    "fabric doll", "wooden picture frame", "leather card case", "mini rattan basket", "natural cleansing bar",
+    "candle warmer", "cotton sheet mask", "handmade brooch", "leather belt", "wooden hanger",
+    "fabric rug", "ceramic teaspoon", "large rattan tray", "reed diffuser stick", "handmade headband",
+    "wooden trivet", "leather pouch", "fabric cushion cover", "knit coaster", "linen tote bag",
+    "ceramic incense holder", "wooden bookend", "leather notebook cover", "fabric tissue box cover", "knit blanket",
+    "wooden serving board", "handmade candle jar", "fabric placemat", "leather phone case", "wooden spoon set",
+    "rattan pendant lamp", "ceramic butter dish", "linen curtain", "handmade tote bag", "wooden jewelry box",
 ]
 
 HEADERS = {"User-Agent": "CopycatWatch-Research/1.0 (educational experiment; contact: contest submission)"}

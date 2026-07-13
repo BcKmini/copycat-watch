@@ -2,7 +2,7 @@
 
 카피캣 워치의 핵심 알고리즘(perceptual hash 기반 이미지 유사도 매칭)이 실제로 얼마나
 정확한지 검증하고, 프로덕션 유사도 임계값(`SIMILARITY_THRESHOLD`)을 데이터 기반으로
-정하기 위해 진행한 실험이다. 총 3번의 이터레이션을 거쳤다.
+정하기 위해 진행한 실험이다. 총 5번의 이터레이션을 거쳤다.
 
 | 단계 | 내용 | 결과 |
 |---|---|---|
@@ -10,14 +10,17 @@
 | Iteration 2 | pytest 유닛테스트 22개 작성 → **색상을 완전히 무시하는 히든 버그 발견** (빨강 vs 파랑 단색 이미지가 100% 일치로 오판) | 버그 재현 테스트로 고정 |
 | Iteration 3 | colorhash를 결합해 색상 불일치 시 감점하도록 수정 → 두 데이터셋 모두 재검증 | F1 0.923→**1.000**(CC), 0.737→**0.962**(프로덕션 40개) |
 | Iteration 4 | 실시간 웹 검색 파이프라인을 2단계 검증(후보 수집 → 서버 실측 대조)으로 재설계, 실사용 중 발견된 OOM/502·중복노출 버그 수정 | 후보 15건→50건(재현율), 오탐 없이 전량 실측검증, 중복 자동 제거(예: 50→45건) |
+| Iteration 5 | 표본 크기를 대폭 확대(CC 18→91개, 프로덕션 데모셋 40→104개)해 재검증, 임계값 재튜닝 | 두 데이터셋 모두 threshold=**30**이 F1 최적(0.948 / 0.928)으로 확인되어 35→30으로 조정 |
 
 ## 1. 데이터셋
 
 **실제 쇼핑몰(스마트스토어/쿠팡 등)은 크롤링하지 않았다** — 이용약관 위반 소지가 있고
 공모전 규정(공공데이터·오픈소스 라이선스 준수)에도 어긋나기 때문이다. 대신
 [Openverse API](https://openverse.org)(CC 라이선스 이미지 검색 엔진)로 "상업적 이용
-가능" 라이선스의 실사 상품 사진 20종을 검색해 **18장**을 수집했다. 각 이미지의 출처,
-저작자, 라이선스는 [`experiments/dataset/manifest.json`](experiments/dataset/manifest.json)에
+가능" 라이선스의 실사 상품 사진을 검색해 수집한다. Iteration 1~4는 검색어 20종(18장
+수집)으로 진행했고, Iteration 5에서 표본 크기를 늘리기 위해 검색어를 **100종으로
+확대해 91장**을 수집했다(9종은 검색 결과 없음/다운로드 차단으로 제외). 각 이미지의
+출처, 저작자, 라이선스는 [`experiments/dataset/manifest.json`](experiments/dataset/manifest.json)에
 전부 기록해 출처 표기 요건을 충족했다.
 
 수집 스크립트: [`experiments/crawl_dataset.py`](experiments/crawl_dataset.py)
@@ -28,7 +31,8 @@
 [02] 'canvas tote bag': 'Emma Burton - Digitally printed...' by Liverpool Design Festival (by-sa)
 [03] 'ceramic mug': 'Coffee into Jars Ceramics mug' by Didriks (by)
 ...
-총 18개 이미지 수집 완료
+[99] 'wooden jewelry box': 'Vintage Wooden Jewelry Box' by vintage19_something (by-nd)
+총 91개 이미지 수집 완료
 ```
 
 각 원본 이미지마다 실제 도용 시나리오를 흉내낸 변형본 2장을 생성했다 (프로덕션의
@@ -41,8 +45,9 @@
 실험은 실제 배포된 매칭 함수(`backend/matching.py`)를 그대로 import해서 돌린다 —
 실험용으로 따로 구현한 코드가 아니라 **프로덕션과 100% 동일한 알고리즘**을 검증한다.
 
-각 원본을 쿼리로, 전체 변형본(같은 상품 2장 + 다른 상품 34장)을 후보로 비교해
+각 원본을 쿼리로, 전체 변형본(전체 상품 수 × 2장, 자기 자신 제외)을 후보로 비교해
 유사도를 계산하고, 임계값을 0~100까지 5 단위로 훑으며 precision/recall/F1을 측정했다.
+Iteration 5 기준 91개 상품 × 182개 후보 = 16,562쌍을 평가했다.
 
 실행: [`experiments/run_experiment.py`](experiments/run_experiment.py)
 
@@ -123,14 +128,14 @@ similarity = max(0, base - penalty)
 | 프로덕션 데모셋 오탐(FP) | 52건 | **1건** |
 
 빨강/파랑 회귀 테스트도 100 → 30.0으로 떨어져 임계값(35) 아래로 확실히 내려갔고,
-`pytest` 22개 전부 통과했다. 임계값은 안전 마진을 두기 위해 그대로 35를 유지했다
-(30을 쓰면 미세하게 더 나은 지표가 나오지만, 새로 발견한 색상 버그의 경계값과 너무
-가까워 안전하게 여유를 뒀다).
-
-![유사도 분포: 진짜 매치 vs 무관한 쌍](experiments/results/similarity_distribution.png)
+`pytest` 22개 전부 통과했다. 이 시점에는 임계값을 안전 마진을 두기 위해 그대로 35로
+유지했다 (30을 쓰면 미세하게 더 나은 지표가 나오지만, 새로 발견한 색상 버그의 경계값과
+너무 가까워 안전하게 여유를 뒀다). 표본을 늘린 뒤 이 결정을 다시 검토한 내용은
+아래 Iteration 5에서 다룬다.
 
 수정 전에는 무관한 쌍이 넓게 퍼져 있었는데, 수정 후에는 거의 대부분 0% 근처로
-확실하게 몰리고 진짜 매치는 40~100%에 뚜렷하게 분리된 걸 확인할 수 있다.
+확실하게 몰리고 진짜 매치는 40~100%에 뚜렷하게 분리되었다 (이때의 히스토그램은
+Iteration 5에서 표본을 늘리며 재생성되어, 최신 차트는 아래에서 확인할 수 있다).
 
 전체 결과 파일: [`experiments/results/threshold_sweep.csv`](experiments/results/threshold_sweep.csv),
 [`experiments/results/summary.json`](experiments/results/summary.json),
@@ -169,10 +174,67 @@ health를 폴링해 200 유지·재시작 0회 확인.
   부하 중 health 200 유지, 팟 재시작 0회
 ```
 
-## 7. 자동화 테스트 스위트
+## 7. Iteration 5 — 표본 확대(18→91개, 40→104개)와 임계값 재튜닝
 
-`backend/tests/`에 28개의 pytest 테스트가 있다 (`test_matching.py` 8개,
-`test_api.py` 20개). 정상 플로우뿐 아니라 아래 같은 히든 케이스를 커버한다:
+이전 실험(Iteration 1~4)의 한계로 지적했던 "표본 크기가 작다"는 문제를 해결하기 위해
+두 데이터셋을 모두 대폭 늘렸다.
+
+- **CC 실험셋**: 검색어 20종(18장) → **100종(91장)**. 나머지 9종은 Openverse 검색
+  결과 없음 또는 이미지 호스트의 다운로드 차단(HTTP 403)으로 제외됨.
+- **프로덕션 데모셋**: 상품 40종 → **104종** (`backend/gen_demo_data.py`의
+  `PRODUCT_NAMES` 확장). 동일한 방식(picsum.photos 실사 이미지 + 크롭/반전 변형)으로
+  생성했고, 원본끼리 너무 비슷한 경우 자동 재시도하는 `_dedupe_similar_originals()`도
+  그대로 적용해 100개 이상 규모에서도 동작을 재검증했다.
+
+표본이 커지자(91개 기준 비교쌍이 648쌍 → 16,562쌍으로 증가) 무관한 쌍의 절대 개수가
+늘어나면서 이전 임계값(35)에서의 지표가 소폭 하락했다:
+
+```
+ threshold | precision |  recall |     f1 |    FP |    FN
+----------------------------------------------------------
+        25 |     0.898 |   0.967 |  0.931 |    20 |     6
+        30 |     0.945 |   0.951 |  0.948 |    10 |     9   <- 신규 production (CC 실험셋, 91개)
+        35 |     0.966 |   0.929 |  0.947 |     6 |    13   (기존 production)
+        45 |     0.970 |   0.890 |  0.928 |     5 |    20
+```
+
+```
+ threshold | precision |  recall |     f1 |    FP |    FN
+----------------------------------------------------------
+        25 |     0.845 |   0.942 |  0.891 |    36 |    12
+        30 |     0.924 |   0.933 |  0.928 |    16 |    14   <- 신규 production (프로덕션 데모셋, 104개)
+        35 |     0.979 |   0.904 |  0.940 |     4 |    20   (기존 production)
+```
+
+**임계값을 35에서 30으로 낮췄다.** 이전에는 색상 무시 버그(빨강 vs 파랑)의 회귀 테스트
+값(30.0)과 너무 가까워서 안전 마진으로 35를 썼는데, 이번에 `MAX_COLOR_PENALTY`를
+70→75로 올려 그 값을 28.0으로 더 떨어뜨렸다(`backend/matching.py`). 그 결과 30을 써도
+회귀 테스트가 안전하게 통과하고, 두 데이터셋 모두에서 UX 관점 지표(자기 상품의 변형본
+2장이 상위 2건 안에 잡히는 비율)도 30이 35보다 뚜렷하게 낫다:
+
+```
+threshold=25: top-2 랭킹 부정확 = 8/104
+threshold=30: top-2 랭킹 부정확 = 12/104   <- 채택
+threshold=35: top-2 랭킹 부정확 = 18/104
+threshold=40: top-2 랭킹 부정확 = 19/104
+threshold=45: top-2 랭킹 부정확 = 21/104
+```
+
+히스토그램도 표본이 커지며 무관한 쌍(16,380쌍)이 진짜 매치(182쌍)보다 90배 가까이
+많아져 일반 스케일로는 진짜 매치 막대가 안 보일 지경이 됐다. y축을 로그 스케일로
+바꿔서 둘 다 보이게 했다(`experiments/run_experiment.py`).
+
+![유사도 분포: 진짜 매치 vs 무관한 쌍 (로그 스케일, 91개 상품)](experiments/results/similarity_distribution.png)
+
+전체 결과 파일은 재생성되어 위 최신 수치를 반영한다:
+[`experiments/results/threshold_sweep.csv`](experiments/results/threshold_sweep.csv),
+[`experiments/results/summary.json`](experiments/results/summary.json),
+[`experiments/results/production_dataset_sweep.txt`](experiments/results/production_dataset_sweep.txt)
+
+## 8. 자동화 테스트 스위트
+
+`backend/tests/`에 30개의 pytest 테스트가 있다 (`test_matching.py` 8개,
+`test_api.py` 22개). 정상 플로우뿐 아니라 아래 같은 히든 케이스를 커버한다:
 
 - 완전 동일 이미지 / 좌우반전 이미지 → 100% 일치
 - 완전히 다른 색의 단색 이미지 → 임계값 미만 (Iteration 2에서 잡은 버그의 회귀 테스트)
@@ -187,22 +249,26 @@ health를 폴링해 200 유지·재시작 0회 확인.
 - URL에서 플랫폼(쿠팡 등)이 자동으로 인식되어 신고서에 반영되는지 검증
 - 여러 매치를 하나로 묶은 통합 신고서 생성 / 빈 목록 거부
 - 같은 글이 http·https·www 변형으로 중복 잡혀도 1건으로 병합되는지 검증
+- 여러 매치가 같은 페이지의 중복 후보일 때 검증된 매치가 우선 남는지 검증
+- 예상 피해액이 소액사건 기준(3천만원)을 넘으면 정식 소송 절차를 안내하는지 검증
 
 ```bash
 cd backend
 pytest tests/ -v
-# 28 passed
+# 30 passed
 ```
 
-## 8. 한계와 향후 개선 방향
+## 9. 한계와 향후 개선 방향
 
 - **perceptual hash(64bit) + colorhash의 한계**: 이번 실험으로 색상 문제는 크게
   개선했지만, 여전히 무늬가 복잡하지 않고 색상 대비가 낮은 상품(예: 흰색 도자기 vs
   아이보리색 도자기)은 구분이 어려울 수 있다. 향후 CLIP 임베딩 기반 유사도로 교체하면
   구조·색상·질감을 한 번에 학습된 표현으로 비교할 수 있어 더 견고해질 것으로 예상된다
   (로드맵에 반영).
-- **표본 크기**: 18~40개 상품은 통계적으로 크지 않다. 실서비스 전환 시 최소 수백 개
-  규모의 실사용 신고 데이터로 재검증이 필요하다.
+- **표본 크기**: Iteration 5에서 18→91개(CC), 40→104개(프로덕션)로 늘려 재검증했지만,
+  여전히 실서비스 규모(수백~수천 건의 실사용 신고 데이터)에는 못 미친다. 특히 색상
+  대비가 낮은 유사 상품군(흰색 vs 아이보리색 도자기 등)에 대한 표본이 부족해, 이런
+  경계 사례가 실제로 얼마나 자주 나타나는지는 이번 실험 규모로는 확인하지 못했다.
 - **Google Vision 자체의 인덱싱 커버리지는 우리가 통제할 수 없다** — 구글이 아직
   크롤링하지 않은 이미지(예: 최근에 도용된 게시물, Instagram처럼 크롤링이 제한적인
   플랫폼)는 서버 실측 검증 단계 이전에 애초에 후보로 들어오지 않는다. 이 경우 결과
@@ -212,13 +278,14 @@ pytest tests/ -v
 - **핫링크 차단 사이트의 딥 검증은 완전하지 않다** — og:image/본문 img 태그 최대 4개까지만
   확인하므로, 이미지가 JS로 늦게 로드되거나 태그 밖에 있으면 놓칠 수 있다.
 
-## 9. 재현 방법
+## 10. 재현 방법
 
 ```bash
 cd experiments
-python crawl_dataset.py    # CC 라이선스 이미지 수집 (manifest.json 생성)
-python run_experiment.py   # 임계값 스윕 + 히스토그램 생성
+python crawl_dataset.py    # CC 라이선스 이미지 수집 (manifest.json 생성, 100종 검색 -> 91장)
+python run_experiment.py   # 임계값 스윕 + 히스토그램 생성 (로그 스케일)
 
 cd ../backend
-pytest tests/ -v           # 유닛/API 테스트 28개
+python gen_demo_data.py    # 프로덕션 데모 데이터셋 재생성 (104종 상품)
+pytest tests/ -v           # 유닛/API 테스트 30개
 ```

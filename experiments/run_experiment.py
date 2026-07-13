@@ -136,7 +136,10 @@ def main():
     plt.hist(true_sims, bins=20, alpha=0.7, label="Same product (original vs copied)", color="#4338ca")
     plt.axvline(SIMILARITY_THRESHOLD, color="#c0392b", linestyle="--", label=f"Production threshold ({SIMILARITY_THRESHOLD})")
     plt.xlabel("Similarity (%)")
-    plt.ylabel("Number of pairs")
+    plt.ylabel("Number of pairs (log scale)")
+    # unrelated 쌍이 O(n^2)으로 늘어나 true-match 막대가 안 보일 정도로 스케일 차이가
+    # 커지므로(예: 91개 상품 -> 16,380 unrelated vs 182 true), 로그 스케일로 둘 다 보이게 한다
+    plt.yscale("log")
     plt.title("Image similarity distribution: true matches vs unrelated pairs")
     plt.legend()
     plt.tight_layout()

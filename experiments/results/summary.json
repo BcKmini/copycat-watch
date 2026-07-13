@@ -1,25 +1,25 @@
 {
-  "dataset_size": 18,
-  "total_pairs": 648,
-  "production_threshold": 35,
+  "dataset_size": 91,
+  "total_pairs": 16562,
+  "production_threshold": 30,
   "production_metrics": {
-    "threshold": 35,
-    "tp": 36,
-    "fp": 0,
-    "fn": 0,
-    "tn": 612,
-    "precision": 1.0,
-    "recall": 1.0,
-    "f1": 1.0
+    "threshold": 30,
+    "tp": 173,
+    "fp": 10,
+    "fn": 9,
+    "tn": 16370,
+    "precision": 0.945,
+    "recall": 0.951,
+    "f1": 0.948
   },
   "best_f1_threshold": {
     "threshold": 30,
-    "tp": 36,
-    "fp": 0,
-    "fn": 0,
-    "tn": 612,
-    "precision": 1.0,
-    "recall": 1.0,
-    "f1": 1.0
+    "tp": 173,
+    "fp": 10,
+    "fn": 9,
+    "tn": 16370,
+    "precision": 0.945,
+    "recall": 0.951,
+    "f1": 0.948
   }
 }

@@ -11,23 +11,17 @@
     "note": "워터마크 붙여 재판매",
     "product_name": "우드윅 소이캔들"
   },
-  "item004_copied_shopB.png": {
-    "shop": "스마트스토어 그린데일리",
-    "price": "5,412원",
-    "note": "동일 사진 좌우반전 후 사용",
-    "product_name": "스테인리스 텀블러"
-  },
   "item000_copied_shopA.png": {
     "shop": "OO마켓 셀러 미소상회",
     "price": "4,500원",
     "note": "원가보다 30% 저렴하게 판매 중",
     "product_name": "라벤더 비누"
   },
-  "item001_copied_shopB.png": {
-    "shop": "OO마켓 홈라이프",
-    "price": "5,253원",
-    "note": "상세페이지 사진 그대로 도용",
-    "product_name": "우드윅 소이캔들"
+  "item004_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "5,412원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "스테인리스 텀블러"
   },
   "item002_copied_shopA.png": {
     "shop": "OO마켓 홈라이프",
@@ -35,23 +29,23 @@
     "note": "상세페이지 사진 그대로 도용",
     "product_name": "패브릭 에코백"
   },
-  "item003_copied_shopA.png": {
-    "shop": "인스타 공동구매 계정",
-    "price": "4,611원",
-    "note": "SNS에서 재판매 중",
-    "product_name": "세라믹 머그컵"
-  },
-  "item000_copied_shopB.png": {
-    "shop": "스마트스토어 데일리샵",
-    "price": "5,200원",
-    "note": "워터마크 붙여 재판매",
-    "product_name": "라벤더 비누"
-  },
   "item006_copied_shopA.png": {
     "shop": "OO마켓 셀러 미소상회",
     "price": "4,722원",
     "note": "원가보다 30% 저렴하게 판매 중",
     "product_name": "가죽 키링"
+  },
+  "item001_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "5,253원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "우드윅 소이캔들"
+  },
+  "item003_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "4,611원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "세라믹 머그컵"
   },
   "item005_copied_shopA.png": {
     "shop": "스마트스토어 그린데일리",
@@ -59,23 +53,17 @@
     "note": "동일 사진 좌우반전 후 사용",
     "product_name": "면 파우치"
   },
+  "item000_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "5,200원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "라벤더 비누"
+  },
   "item002_copied_shopB.png": {
     "shop": "인스타 공동구매 계정",
     "price": "5,306원",
     "note": "SNS에서 재판매 중",
     "product_name": "패브릭 에코백"
-  },
-  "item007_copied_shopA.png": {
-    "shop": "스마트스토어 데일리샵",
-    "price": "4,759원",
-    "note": "워터마크 붙여 재판매",
-    "product_name": "노트북 파우치"
-  },
-  "item003_copied_shopB.png": {
-    "shop": "OO마켓 에코라이프",
-    "price": "5,359원",
-    "note": "제품명만 바꿔서 등록",
-    "product_name": "세라믹 머그컵"
   },
   "item006_copied_shopB.png": {
     "shop": "스마트스토어 데일리샵",
@@ -83,11 +71,23 @@
     "note": "워터마크 붙여 재판매",
     "product_name": "가죽 키링"
   },
+  "item007_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "4,759원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "노트북 파우치"
+  },
   "item005_copied_shopB.png": {
     "shop": "OO마켓 셀러 미소상회",
     "price": "5,465원",
     "note": "원가보다 30% 저렴하게 판매 중",
     "product_name": "면 파우치"
+  },
+  "item003_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "5,359원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "세라믹 머그컵"
   },
   "item007_copied_shopB.png": {
     "shop": "OO마켓 홈라이프",
@@ -95,17 +95,17 @@
     "note": "상세페이지 사진 그대로 도용",
     "product_name": "노트북 파우치"
   },
-  "item009_copied_shopA.png": {
-    "shop": "인스타 공동구매 계정",
-    "price": "4,833원",
-    "note": "SNS에서 재판매 중",
-    "product_name": "린넨 앞치마"
-  },
   "item008_copied_shopA.png": {
     "shop": "OO마켓 홈라이프",
     "price": "4,796원",
     "note": "상세페이지 사진 그대로 도용",
     "product_name": "자수 손수건"
+  },
+  "item009_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "4,833원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "린넨 앞치마"
   },
   "item013_copied_shopA.png": {
     "shop": "스마트스토어 데일리샵",
@@ -113,17 +113,17 @@
     "note": "워터마크 붙여 재판매",
     "product_name": "가죽 반지갑"
   },
+  "item010_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "4,870원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "수제 도자기 그릇"
+  },
   "item009_copied_shopB.png": {
     "shop": "OO마켓 에코라이프",
     "price": "5,677원",
     "note": "제품명만 바꿔서 등록",
     "product_name": "린넨 앞치마"
-  },
-  "item011_copied_shopA.png": {
-    "shop": "스마트스토어 그린데일리",
-    "price": "4,907원",
-    "note": "동일 사진 좌우반전 후 사용",
-    "product_name": "원목 도마"
   },
   "item008_copied_shopB.png": {
     "shop": "인스타 공동구매 계정",
@@ -137,11 +137,11 @@
     "note": "상세페이지 사진 그대로 도용",
     "product_name": "가죽 반지갑"
   },
-  "item010_copied_shopA.png": {
-    "shop": "OO마켓 에코라이프",
-    "price": "4,870원",
-    "note": "제품명만 바꿔서 등록",
-    "product_name": "수제 도자기 그릇"
+  "item015_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "5,055원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "디퓨저 세트"
   },
   "item014_copied_shopA.png": {
     "shop": "OO마켓 홈라이프",
@@ -149,11 +149,11 @@
     "note": "상세페이지 사진 그대로 도용",
     "product_name": "천연 향초"
   },
-  "item015_copied_shopA.png": {
-    "shop": "인스타 공동구매 계정",
-    "price": "5,055원",
-    "note": "SNS에서 재판매 중",
-    "product_name": "디퓨저 세트"
+  "item011_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "4,907원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "원목 도마"
   },
   "item012_copied_shopA.png": {
     "shop": "OO마켓 셀러 미소상회",
@@ -161,17 +161,11 @@
     "note": "원가보다 30% 저렴하게 판매 중",
     "product_name": "뜨개 인형"
   },
-  "item011_copied_shopB.png": {
-    "shop": "OO마켓 셀러 미소상회",
-    "price": "5,783원",
-    "note": "원가보다 30% 저렴하게 판매 중",
-    "product_name": "원목 도마"
-  },
-  "item014_copied_shopB.png": {
-    "shop": "인스타 공동구매 계정",
-    "price": "5,942원",
-    "note": "SNS에서 재판매 중",
-    "product_name": "천연 향초"
+  "item010_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "5,730원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "수제 도자기 그릇"
   },
   "item015_copied_shopB.png": {
     "shop": "OO마켓 에코라이프",
@@ -179,11 +173,17 @@
     "note": "제품명만 바꿔서 등록",
     "product_name": "디퓨저 세트"
   },
-  "item010_copied_shopB.png": {
-    "shop": "스마트스토어 그린데일리",
-    "price": "5,730원",
-    "note": "동일 사진 좌우반전 후 사용",
-    "product_name": "수제 도자기 그릇"
+  "item014_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "5,942원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "천연 향초"
+  },
+  "item011_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "5,783원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "원목 도마"
   },
   "item012_copied_shopB.png": {
     "shop": "스마트스토어 데일리샵",
@@ -197,35 +197,23 @@
     "note": "원가보다 30% 저렴하게 판매 중",
     "product_name": "마크라메 행잉플랜트"
   },
-  "item016_copied_shopA.png": {
-    "shop": "OO마켓 에코라이프",
-    "price": "5,092원",
-    "note": "제품명만 바꿔서 등록",
-    "product_name": "티코스터 세트"
-  },
   "item018_copied_shopB.png": {
     "shop": "스마트스토어 데일리샵",
     "price": "6,154원",
     "note": "워터마크 붙여 재판매",
     "product_name": "마크라메 행잉플랜트"
   },
+  "item016_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "5,092원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "티코스터 세트"
+  },
   "item016_copied_shopB.png": {
     "shop": "스마트스토어 그린데일리",
     "price": "6,048원",
     "note": "동일 사진 좌우반전 후 사용",
     "product_name": "티코스터 세트"
-  },
-  "item017_copied_shopA.png": {
-    "shop": "스마트스토어 그린데일리",
-    "price": "5,129원",
-    "note": "동일 사진 좌우반전 후 사용",
-    "product_name": "천연 오일 스크럽"
-  },
-  "item019_copied_shopA.png": {
-    "shop": "스마트스토어 데일리샵",
-    "price": "5,203원",
-    "note": "워터마크 붙여 재판매",
-    "product_name": "캘리그라피 엽서"
   },
   "item020_copied_shopA.png": {
     "shop": "OO마켓 홈라이프",
@@ -245,6 +233,12 @@
     "note": "SNS에서 재판매 중",
     "product_name": "실버 반지"
   },
+  "item017_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "5,129원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "천연 오일 스크럽"
+  },
   "item022_copied_shopB.png": {
     "shop": "스마트스토어 그린데일리",
     "price": "6,366원",
@@ -263,10 +257,10 @@
     "note": "동일 사진 좌우반전 후 사용",
     "product_name": "가죽 팔찌"
   },
-  "item019_copied_shopB.png": {
-    "shop": "OO마켓 홈라이프",
-    "price": "6,207원",
-    "note": "상세페이지 사진 그대로 도용",
+  "item019_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "5,203원",
+    "note": "워터마크 붙여 재판매",
     "product_name": "캘리그라피 엽서"
   },
   "item021_copied_shopB.png": {
@@ -275,17 +269,23 @@
     "note": "제품명만 바꿔서 등록",
     "product_name": "실버 반지"
   },
+  "item023_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "6,419원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "가죽 팔찌"
+  },
   "item017_copied_shopB.png": {
     "shop": "OO마켓 셀러 미소상회",
     "price": "6,101원",
     "note": "원가보다 30% 저렴하게 판매 중",
     "product_name": "천연 오일 스크럽"
   },
-  "item023_copied_shopB.png": {
-    "shop": "OO마켓 셀러 미소상회",
-    "price": "6,419원",
-    "note": "원가보다 30% 저렴하게 판매 중",
-    "product_name": "가죽 팔찌"
+  "item019_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "6,207원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "캘리그라피 엽서"
   },
   "item024_copied_shopA.png": {
     "shop": "OO마켓 셀러 미소상회",
@@ -317,17 +317,23 @@
     "note": "SNS에서 재판매 중",
     "product_name": "가죽 북마크"
   },
+  "item026_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "5,462원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "다이어리 스티커"
+  },
   "item030_copied_shopA.png": {
     "shop": "OO마켓 셀러 미소상회",
     "price": "5,610원",
     "note": "원가보다 30% 저렴하게 판매 중",
     "product_name": "우드 트레이"
   },
-  "item026_copied_shopA.png": {
-    "shop": "OO마켓 홈라이프",
-    "price": "5,462원",
-    "note": "상세페이지 사진 그대로 도용",
-    "product_name": "다이어리 스티커"
+  "item027_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "6,631원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "가죽 북마크"
   },
   "item029_copied_shopA.png": {
     "shop": "스마트스토어 그린데일리",
@@ -335,11 +341,17 @@
     "note": "동일 사진 좌우반전 후 사용",
     "product_name": "소가죽 카드지갑"
   },
-  "item027_copied_shopB.png": {
-    "shop": "OO마켓 에코라이프",
-    "price": "6,631원",
-    "note": "제품명만 바꿔서 등록",
-    "product_name": "가죽 북마크"
+  "item026_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "6,578원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "다이어리 스티커"
+  },
+  "item031_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "5,647원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "라탄 바구니"
   },
   "item028_copied_shopA.png": {
     "shop": "OO마켓 에코라이프",
@@ -353,35 +365,23 @@
     "note": "워터마크 붙여 재판매",
     "product_name": "우드 트레이"
   },
-  "item031_copied_shopA.png": {
-    "shop": "스마트스토어 데일리샵",
-    "price": "5,647원",
-    "note": "워터마크 붙여 재판매",
-    "product_name": "라탄 바구니"
-  },
-  "item026_copied_shopB.png": {
-    "shop": "인스타 공동구매 계정",
-    "price": "6,578원",
-    "note": "SNS에서 재판매 중",
-    "product_name": "다이어리 스티커"
-  },
   "item029_copied_shopB.png": {
     "shop": "OO마켓 셀러 미소상회",
     "price": "6,737원",
     "note": "원가보다 30% 저렴하게 판매 중",
     "product_name": "소가죽 카드지갑"
   },
-  "item028_copied_shopB.png": {
-    "shop": "스마트스토어 그린데일리",
-    "price": "6,684원",
-    "note": "동일 사진 좌우반전 후 사용",
-    "product_name": "우드 코스터"
-  },
   "item031_copied_shopB.png": {
     "shop": "OO마켓 홈라이프",
     "price": "6,843원",
     "note": "상세페이지 사진 그대로 도용",
     "product_name": "라탄 바구니"
+  },
+  "item028_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "6,684원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "우드 코스터"
   },
   "item032_copied_shopA.png": {
     "shop": "OO마켓 홈라이프",
@@ -395,11 +395,17 @@
     "note": "SNS에서 재판매 중",
     "product_name": "세라믹 화병"
   },
-  "item037_copied_shopA.png": {
-    "shop": "스마트스토어 데일리샵",
-    "price": "5,869원",
-    "note": "워터마크 붙여 재판매",
-    "product_name": "미니 화분"
+  "item033_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "5,721원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "유리컵 세트"
+  },
+  "item033_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "6,949원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "유리컵 세트"
   },
   "item034_copied_shopA.png": {
     "shop": "OO마켓 에코라이프",
@@ -407,22 +413,34 @@
     "note": "제품명만 바꿔서 등록",
     "product_name": "실리콘 밀폐용기"
   },
+  "item034_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "7,002원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "실리콘 밀폐용기"
+  },
+  "item036_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "5,832원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "린넨 앞치마 세트"
+  },
   "item035_copied_shopA.png": {
     "shop": "스마트스토어 그린데일리",
     "price": "5,795원",
     "note": "동일 사진 좌우반전 후 사용",
     "product_name": "면 마스크"
   },
-  "item033_copied_shopA.png": {
-    "shop": "인스타 공동구매 계정",
-    "price": "5,721원",
-    "note": "SNS에서 재판매 중",
-    "product_name": "유리컵 세트"
+  "item036_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "7,108원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "린넨 앞치마 세트"
   },
-  "item037_copied_shopB.png": {
-    "shop": "OO마켓 홈라이프",
-    "price": "7,161원",
-    "note": "상세페이지 사진 그대로 도용",
+  "item037_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "5,869원",
+    "note": "워터마크 붙여 재판매",
     "product_name": "미니 화분"
   },
   "item039_copied_shopA.png": {
@@ -431,35 +449,11 @@
     "note": "SNS에서 재판매 중",
     "product_name": "왁스타블렛"
   },
-  "item034_copied_shopB.png": {
-    "shop": "스마트스토어 그린데일리",
-    "price": "7,002원",
-    "note": "동일 사진 좌우반전 후 사용",
-    "product_name": "실리콘 밀폐용기"
-  },
   "item035_copied_shopB.png": {
     "shop": "OO마켓 셀러 미소상회",
     "price": "7,055원",
     "note": "원가보다 30% 저렴하게 판매 중",
     "product_name": "면 마스크"
-  },
-  "item036_copied_shopA.png": {
-    "shop": "OO마켓 셀러 미소상회",
-    "price": "5,832원",
-    "note": "원가보다 30% 저렴하게 판매 중",
-    "product_name": "린넨 앞치마 세트"
-  },
-  "item033_copied_shopB.png": {
-    "shop": "OO마켓 에코라이프",
-    "price": "6,949원",
-    "note": "제품명만 바꿔서 등록",
-    "product_name": "유리컵 세트"
-  },
-  "item038_copied_shopA.png": {
-    "shop": "OO마켓 홈라이프",
-    "price": "5,906원",
-    "note": "상세페이지 사진 그대로 도용",
-    "product_name": "handmade 비누세트"
   },
   "item039_copied_shopB.png": {
     "shop": "OO마켓 에코라이프",
@@ -467,16 +461,790 @@
     "note": "제품명만 바꿔서 등록",
     "product_name": "왁스타블렛"
   },
-  "item036_copied_shopB.png": {
-    "shop": "스마트스토어 데일리샵",
-    "price": "7,108원",
-    "note": "워터마크 붙여 재판매",
-    "product_name": "린넨 앞치마 세트"
+  "item037_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "7,161원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "미니 화분"
+  },
+  "item038_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "5,906원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "handmade 비누세트"
   },
   "item038_copied_shopB.png": {
     "shop": "인스타 공동구매 계정",
     "price": "7,214원",
     "note": "SNS에서 재판매 중",
     "product_name": "handmade 비누세트"
+  },
+  "item040_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "5,980원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "천연 립밤"
+  },
+  "item040_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "7,320원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "천연 립밤"
+  },
+  "item041_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "6,017원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "고체 샴푸바"
+  },
+  "item041_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "7,373원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "고체 샴푸바"
+  },
+  "item042_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "6,054원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "우드 빗"
+  },
+  "item042_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "7,426원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "우드 빗"
+  },
+  "item045_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "6,165원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "리넨 냅킨"
+  },
+  "item043_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "6,091원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "천연 수세미"
+  },
+  "item045_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "7,585원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "리넨 냅킨"
+  },
+  "item046_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "6,202원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "라탄 트레이"
+  },
+  "item044_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "6,128원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "면 행주 세트"
+  },
+  "item047_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "6,239원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "우드 시계"
+  },
+  "item043_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "7,479원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "천연 수세미"
+  },
+  "item046_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "7,638원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "라탄 트레이"
+  },
+  "item047_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "7,691원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "우드 시계"
+  },
+  "item044_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "7,532원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "면 행주 세트"
+  },
+  "item048_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "6,276원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "가죽 여권지갑"
+  },
+  "item048_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "7,744원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "가죽 여권지갑"
+  },
+  "item050_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "6,350원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "천 필통"
+  },
+  "item051_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "6,387원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "패브릭 파우치"
+  },
+  "item050_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "7,850원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "천 필통"
+  },
+  "item051_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "7,903원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "패브릭 파우치"
+  },
+  "item053_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "6,461원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "손뜨개 장갑"
+  },
+  "item053_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "8,009원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "손뜨개 장갑"
+  },
+  "item052_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "6,424원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "니트 목도리"
+  },
+  "item052_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "7,956원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "니트 목도리"
+  },
+  "item055_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "6,535원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "천연 비즈왁스랩"
+  },
+  "item054_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "6,498원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "패치워크 방석"
+  },
+  "item055_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "8,115원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "천연 비즈왁스랩"
+  },
+  "item054_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "8,062원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "패치워크 방석"
+  },
+  "item056_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "6,572원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "대나무 칫솔"
+  },
+  "item056_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "8,168원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "대나무 칫솔"
+  },
+  "item049_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "6,313원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "미니 크로스백"
+  },
+  "item049_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "7,797원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "미니 크로스백"
+  },
+  "item058_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "6,646원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "도자기 접시 세트"
+  },
+  "item058_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "8,274원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "도자기 접시 세트"
+  },
+  "item059_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "6,683원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "무명 앞치마"
+  },
+  "item059_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "8,327원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "무명 앞치마"
+  },
+  "item057_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "6,609원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "유리 디퓨저병"
+  },
+  "item057_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "8,221원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "유리 디퓨저병"
+  },
+  "item060_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "6,720원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "가죽 명함지갑"
+  },
+  "item060_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "8,380원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "가죽 명함지갑"
+  },
+  "item061_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "6,757원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "우드 트레이 세트"
+  },
+  "item062_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "6,794원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "라탄 조명갓"
+  },
+  "item062_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "8,486원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "라탄 조명갓"
+  },
+  "item061_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "8,433원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "우드 트레이 세트"
+  },
+  "item063_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "6,831원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "세라믹 캔들홀더"
+  },
+  "item063_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "8,539원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "세라믹 캔들홀더"
+  },
+  "item064_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "6,868원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "천연 소이왁스타블렛"
+  },
+  "item064_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "8,592원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "천연 소이왁스타블렛"
+  },
+  "item065_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "6,905원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "핸드메이드 귀걸이"
+  },
+  "item066_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "6,942원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "구슬 팔찌"
+  },
+  "item066_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "8,698원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "구슬 팔찌"
+  },
+  "item065_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "8,645원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "핸드메이드 귀걸이"
+  },
+  "item068_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "7,016원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "패브릭 북커버"
+  },
+  "item070_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "7,090원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "우드 도장"
+  },
+  "item069_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "7,053원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "리넨 파우치"
+  },
+  "item068_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "8,804원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "패브릭 북커버"
+  },
+  "item070_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "8,910원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "우드 도장"
+  },
+  "item069_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "8,857원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "리넨 파우치"
+  },
+  "item072_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "7,164원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "수제 그래놀라바"
+  },
+  "item072_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "9,016원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "수제 그래놀라바"
+  },
+  "item067_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "6,979원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "가죽 시계줄"
+  },
+  "item073_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "7,201원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "핸드드립 드립백 세트"
+  },
+  "item073_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "9,069원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "핸드드립 드립백 세트"
+  },
+  "item074_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "7,238원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "수제 잼"
+  },
+  "item067_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "8,751원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "가죽 시계줄"
+  },
+  "item074_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "9,122원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "수제 잼"
+  },
+  "item077_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "7,349원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "라탄 컵받침"
+  },
+  "item077_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "9,281원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "라탄 컵받침"
+  },
+  "item075_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "7,275원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "천연 발효 식초"
+  },
+  "item071_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "7,127원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "천연 아로마오일"
+  },
+  "item076_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "7,312원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "우드 수저받침"
+  },
+  "item071_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "8,963원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "천연 아로마오일"
+  },
+  "item075_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "9,175원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "천연 발효 식초"
+  },
+  "item076_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "9,228원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "우드 수저받침"
+  },
+  "item078_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "7,386원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "가죽 열쇠고리"
+  },
+  "item078_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "9,334원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "가죽 열쇠고리"
+  },
+  "item079_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "7,423원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "패브릭 티코스터"
+  },
+  "item079_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "9,387원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "패브릭 티코스터"
+  },
+  "item080_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "7,460원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "세라믹 비누receptacle"
+  },
+  "item081_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "7,497원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "우드 트레이 미니"
+  },
+  "item080_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "9,440원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "세라믹 비누receptacle"
+  },
+  "item081_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "9,493원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "우드 트레이 미니"
+  },
+  "item083_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "7,571원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "핸드메이드 방향제"
+  },
+  "item082_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "7,534원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "천연 모기퇴치 스프레이"
+  },
+  "item084_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "7,608원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "니트 파우치"
+  },
+  "item083_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "9,599원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "핸드메이드 방향제"
+  },
+  "item084_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "9,652원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "니트 파우치"
+  },
+  "item082_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "9,546원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "천연 모기퇴치 스프레이"
+  },
+  "item085_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "7,645원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "패브릭 인형"
+  },
+  "item085_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "9,705원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "패브릭 인형"
+  },
+  "item086_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "7,682원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "우드 액자"
+  },
+  "item086_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "9,758원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "우드 액자"
+  },
+  "item087_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "7,719원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "가죽 카드케이스"
+  },
+  "item087_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "9,811원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "가죽 카드케이스"
+  },
+  "item088_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "7,756원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "라탄 바스켓 미니"
+  },
+  "item089_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "7,793원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "천연 클렌징바"
+  },
+  "item088_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "9,864원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "라탄 바스켓 미니"
+  },
+  "item089_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "9,917원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "천연 클렌징바"
+  },
+  "item091_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "7,867원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "무명 마스크팩"
+  },
+  "item090_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "7,830원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "수제 캔들워머"
+  },
+  "item091_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "10,023원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "무명 마스크팩"
+  },
+  "item092_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "7,904원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "핸드메이드 브로치"
+  },
+  "item090_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "9,970원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "수제 캔들워머"
+  },
+  "item092_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "10,076원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "핸드메이드 브로치"
+  },
+  "item093_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "7,941원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "가죽 벨트"
+  },
+  "item093_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "10,129원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "가죽 벨트"
+  },
+  "item095_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "8,015원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "패브릭 러그"
+  },
+  "item095_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "10,235원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "패브릭 러그"
+  },
+  "item096_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "8,052원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "세라믹 티스푼"
+  },
+  "item097_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "8,089원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "라탄 트레이 대형"
+  },
+  "item096_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "10,288원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "세라믹 티스푼"
+  },
+  "item097_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "10,341원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "라탄 트레이 대형"
+  },
+  "item094_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "7,978원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "우드 옷걸이"
+  },
+  "item099_copied_shopA.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "8,163원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "핸드메이드 헤어밴드"
+  },
+  "item094_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "10,182원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "우드 옷걸이"
+  },
+  "item099_copied_shopB.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "10,447원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "핸드메이드 헤어밴드"
+  },
+  "item100_copied_shopA.png": {
+    "shop": "OO마켓 에코라이프",
+    "price": "8,200원",
+    "note": "제품명만 바꿔서 등록",
+    "product_name": "우드 트리벳"
+  },
+  "item098_copied_shopA.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "8,126원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "천연 디퓨저 스틱"
+  },
+  "item101_copied_shopA.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "8,237원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "가죽 파우치"
+  },
+  "item100_copied_shopB.png": {
+    "shop": "스마트스토어 그린데일리",
+    "price": "10,500원",
+    "note": "동일 사진 좌우반전 후 사용",
+    "product_name": "우드 트리벳"
+  },
+  "item098_copied_shopB.png": {
+    "shop": "인스타 공동구매 계정",
+    "price": "10,394원",
+    "note": "SNS에서 재판매 중",
+    "product_name": "천연 디퓨저 스틱"
+  },
+  "item101_copied_shopB.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "10,553원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "가죽 파우치"
+  },
+  "item102_copied_shopA.png": {
+    "shop": "OO마켓 셀러 미소상회",
+    "price": "8,274원",
+    "note": "원가보다 30% 저렴하게 판매 중",
+    "product_name": "패브릭 쿠션커버"
+  },
+  "item102_copied_shopB.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "10,606원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "패브릭 쿠션커버"
+  },
+  "item103_copied_shopA.png": {
+    "shop": "스마트스토어 데일리샵",
+    "price": "8,311원",
+    "note": "워터마크 붙여 재판매",
+    "product_name": "니트 코스터"
+  },
+  "item103_copied_shopB.png": {
+    "shop": "OO마켓 홈라이프",
+    "price": "10,659원",
+    "note": "상세페이지 사진 그대로 도용",
+    "product_name": "니트 코스터"
   }
 }
