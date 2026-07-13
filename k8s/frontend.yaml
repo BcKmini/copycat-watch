@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: copycat-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: copycat-frontend
+  template:
+    metadata:
+      labels:
+        app: copycat-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: copycat-frontend:latest
+          ports:
+            - containerPort: 80
+          env:
+            - name: BACKEND_HOST
+              value: copycat-backend
+            - name: BACKEND_PORT
+              value: "8000"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: copycat-frontend
+spec:
+  selector:
+    app: copycat-frontend
+  ports:
+    - port: 80
+      targetPort: 80
