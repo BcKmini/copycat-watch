@@ -439,6 +439,24 @@ button:disabled {
   margin-bottom: 2px;
 }
 
+.badge-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.badge-verified {
+  background: #e6f6ec;
+  color: #1e8a4c;
+}
+
+@media (prefers-color-scheme: dark) {
+  .badge-verified {
+    background: #1c3527;
+    color: #6fd39a;
+  }
+}
+
 .badge-high {
   background: var(--danger-bg);
   color: var(--danger-ink);

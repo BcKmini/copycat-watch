@@ -19,6 +19,12 @@ def _load_demo_data():
     main._load_demo_hashes()
 
 
+@pytest.fixture(autouse=True)
+def _no_external_apis(monkeypatch):
+    """테스트는 외부 API 없이 결정적으로 돌아야 한다 - 웹 검색 경로를 차단해 데모 매칭 강제."""
+    monkeypatch.delenv("GOOGLE_VISION_API_KEY", raising=False)
+
+
 @pytest.fixture
 def client():
     return TestClient(main.app)
@@ -53,9 +59,9 @@ def test_scan_own_demo_image_finds_its_own_copies(client):
         resp = client.post("/api/scan", files={"file": ("item000_original.png", f, "image/png")})
     assert resp.status_code == 200
     data = resp.json()
-    if data["mode"] == "demo":
-        matched_files = [m["file"] for m in data["matches"]]
-        assert "item000_copied_shopA.png" in matched_files
+    assert data["mode"] == "demo"
+    matched_files = [m["file"] for m in data["matches"]]
+    assert "item000_copied_shopA.png" in matched_files
 
 
 def test_scan_rejects_non_image_file(client):

@@ -5,6 +5,7 @@ import logging
 import os
 import re
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
 import imagehash
@@ -84,9 +85,39 @@ def demo_image(fname: str):
     return FileResponse(os.path.join(DEMO_DIR, fname))
 
 
-def _scan_web(content: bytes) -> dict | None:
-    """Google Cloud Vision Web Detection으로 실제 인터넷에서 동일/유사 이미지가 쓰인
-    웹페이지를 찾는다. 키가 없거나 API 호출이 실패하면 None을 반환해 데모 매칭으로 폴백한다."""
+FETCH_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) CopycatWatch/1.0"}
+VERIFY_TIMEOUT = 6  # 후보 이미지 1장 다운로드 제한시간(초)
+VERIFY_MAX_BYTES = 5 * 1024 * 1024  # 후보 이미지 최대 크기
+VERIFY_WORKERS = 8
+WEB_RESULT_LIMIT = 15
+
+
+def _verify_candidate_image(query_h, url: str) -> float | None:
+    """후보 이미지를 직접 내려받아 프로덕션 유사도 알고리즘으로 실측 점수를 계산한다.
+    다운로드/디코딩에 실패하면 None (검증 불가)."""
+    if not url or not url.startswith(("http://", "https://")):
+        return None
+    try:
+        resp = requests.get(url, headers=FETCH_HEADERS, timeout=VERIFY_TIMEOUT, stream=True)
+        resp.raise_for_status()
+        data = resp.raw.read(VERIFY_MAX_BYTES + 1, decode_content=True)
+        if len(data) > VERIFY_MAX_BYTES:
+            return None
+        img = Image.open(io.BytesIO(data))
+        img.load()
+        chash, ccolor = candidate_hashes(img.convert("RGB"))
+        return similarity_from_hashes(query_h[0], query_h[1], query_h[2], chash, ccolor)
+    except Exception:
+        return None
+
+
+def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
+    """2단계 검색 파이프라인:
+    1) Google Vision Web Detection으로 인터넷 전체에서 후보 페이지/이미지를 수집 (재현율 확보)
+    2) 각 후보 이미지를 서버가 직접 내려받아 프로덕션 유사도 알고리즘(phash+colorhash)으로
+       실측 검증·재정렬 (정밀도 확보)
+    Vision의 '비슷해 보이는' 후보를 그대로 믿으면 무관한 상품이 상위에 섞이기 때문에,
+    실측 유사도가 임계값 미만인 후보는 걸러낸다. 키가 없거나 API 실패 시 None(데모 폴백)."""
     api_key = os.environ.get("GOOGLE_VISION_API_KEY")
     if not api_key:
         return None
@@ -97,7 +128,7 @@ def _scan_web(content: bytes) -> dict | None:
             json={
                 "requests": [{
                     "image": {"content": base64.b64encode(content).decode()},
-                    "features": [{"type": "WEB_DETECTION", "maxResults": 20}],
+                    "features": [{"type": "WEB_DETECTION", "maxResults": 30}],
                 }]
             },
             timeout=15,
@@ -108,62 +139,80 @@ def _scan_web(content: bytes) -> dict | None:
         logger.warning("Vision API 호출 실패, 데모 매칭으로 폴백: %s", e)
         return None
 
-    full_match_urls = {img.get("url") for img in web.get("fullMatchingImages", [])}
-    pages = web.get("pagesWithMatchingImages", [])
-
-    matches = []
+    # 1단계: 후보 수집 (페이지 우선, 게시처 미확인 이미지는 보조)
+    candidates = []
     seen_urls = set()
-    # Vision API는 이미 관련도순으로 정렬해서 주기 때문에, 그 순서를 등수로 환산해
-    # 같은 등급(완전/부분 일치) 안에서도 미세하게 순위를 반영한다.
-    for rank, page in enumerate(pages):
+    for page in web.get("pagesWithMatchingImages", []):
         page_url = page.get("url")
         if not page_url or page_url in seen_urls:
             continue
         seen_urls.add(page_url)
-
-        thumb = None
-        page_full_images = page.get("fullMatchingImages", [])
-        page_partial_images = page.get("partialMatchingImages", [])
-        if page_full_images:
-            thumb = page_full_images[0].get("url")
-        elif page_partial_images:
-            thumb = page_partial_images[0].get("url")
-
-        is_full_match = any(img.get("url") in full_match_urls for img in page_full_images)
-        base_score = 95 if is_full_match else 70
-        similarity = round(max(base_score - rank * 0.5, base_score - 10), 1)
-
-        matches.append({
-            "file": page_url,
-            "similarity": similarity,
-            "shop": page.get("pageTitle") or page_url,
-            "price": "-",
-            "note": "웹에서 동일 이미지가 게시된 페이지" if is_full_match else "웹에서 유사 이미지가 게시된 페이지",
+        page_full = page.get("fullMatchingImages", [])
+        page_partial = page.get("partialMatchingImages", [])
+        thumb = (page_full or page_partial or [{}])[0].get("url")
+        candidates.append({
+            "key": page_url,
+            "title": page.get("pageTitle") or page_url,
             "image_url": thumb,
-            "estimated_damage": None,
             "source_url": page_url,
-            "source": "web",
+            "tier": "full" if page_full else ("partial" if page_partial else "page"),
         })
-
-    # 게시 페이지를 특정 못 해도, 동일 이미지 자체가 다른 곳에 존재하면 참고용으로 보여준다
-    for img in web.get("visuallySimilarImages", [])[:5]:
+    for img in web.get("visuallySimilarImages", [])[:8]:
         img_url = img.get("url")
         if not img_url or img_url in seen_urls:
             continue
         seen_urls.add(img_url)
-        matches.append({
-            "file": img_url,
-            "similarity": 50.0,
-            "shop": "게시 페이지 미확인",
-            "price": "-",
-            "note": "이미지 자체는 발견됐지만 게시된 페이지를 특정하지 못했어요",
+        candidates.append({
+            "key": img_url,
+            "title": "게시 페이지 미확인",
             "image_url": img_url,
-            "estimated_damage": None,
             "source_url": None,
-            "source": "web",
+            "tier": "similar",
         })
 
-    matches.sort(key=lambda m: -m["similarity"])
+    # 2단계: 후보 이미지를 병렬로 내려받아 실측 유사도 검증
+    query_h = query_hashes(query_img)
+    with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as pool:
+        verified = list(pool.map(
+            lambda c: _verify_candidate_image(query_h, c["image_url"]), candidates
+        ))
+
+    # 검증 불가(이미지 다운로드 차단 등) 시 Vision 등급 기반 보수적 점수로 폴백
+    TIER_FALLBACK = {"full": 85.0, "partial": 60.0, "page": 45.0, "similar": 0.0}
+    TIER_NOTE = {
+        "full": "웹에서 동일 이미지가 게시된 페이지",
+        "partial": "웹에서 변형(크롭 등)된 이미지가 게시된 페이지",
+        "page": "웹에서 관련 이미지가 게시된 페이지",
+        "similar": "게시 페이지를 특정하지 못한 유사 이미지",
+    }
+
+    matches = []
+    for cand, measured in zip(candidates, verified):
+        if measured is not None:
+            similarity = measured
+            note = f"{TIER_NOTE[cand['tier']]} · 원본 대비 실측 유사도 {measured}%"
+        else:
+            similarity = TIER_FALLBACK[cand["tier"]]
+            note = f"{TIER_NOTE[cand['tier']]} · 이미지 직접 검증 불가(사이트 차단)"
+        if similarity < SIMILARITY_THRESHOLD:
+            continue
+        matches.append({
+            "file": cand["key"],
+            "similarity": similarity,
+            "shop": cand["title"],
+            "price": "-",
+            "note": note,
+            "image_url": cand["image_url"],
+            "estimated_damage": None,
+            "source_url": cand["source_url"],
+            "source": "web",
+            "verified": measured is not None,
+        })
+
+    # 실측 검증된 결과를 우선하고, 같은 그룹 안에서는 유사도 내림차순
+    matches.sort(key=lambda m: (-m["verified"], -m["similarity"]))
+    matches = matches[:WEB_RESULT_LIMIT]
+
     best_guess = web.get("bestGuessLabels", [])
     label = best_guess[0]["label"] if best_guess else None
     return {"matches": matches, "label": label}
@@ -210,7 +259,7 @@ async def scan(file: UploadFile = File(...)):
     except Exception:
         raise HTTPException(400, "이미지 파일을 읽을 수 없습니다")
 
-    web_result = _scan_web(content)
+    web_result = _scan_web(content, query_img)
     if web_result is not None:
         return {"matches": web_result["matches"], "mode": "web", "label": web_result["label"]}
 

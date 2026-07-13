@@ -403,8 +403,11 @@ function App() {
                         />
                       )}
                       <div className="match-info">
-                        <span className={`badge badge-${severity(m.similarity)}`}>
-                          유사도 {m.similarity}%
+                        <span className="badge-row">
+                          <span className={`badge badge-${severity(m.similarity)}`}>
+                            유사도 {m.similarity}%
+                          </span>
+                          {m.verified && <span className="badge badge-verified">실측 검증</span>}
                         </span>
                         <strong>{m.shop}</strong>
                         <span className="note">{m.note}</span>
