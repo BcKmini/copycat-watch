@@ -88,7 +88,7 @@ def demo_image(fname: str):
 FETCH_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) CopycatWatch/1.0"}
 VERIFY_TIMEOUT = 6  # 후보 이미지 1장 다운로드 제한시간(초)
 VERIFY_MAX_BYTES = 5 * 1024 * 1024  # 후보 이미지 최대 크기
-VERIFY_WORKERS = 8
+VERIFY_WORKERS = 16
 WEB_RESULT_LIMIT = 15
 
 
@@ -161,7 +161,7 @@ def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
             "source_url": page_url,
             "tier": "full" if page_full else "partial",
         })
-    for img in web.get("visuallySimilarImages", [])[:8]:
+    for img in web.get("visuallySimilarImages", [])[:20]:
         img_url = img.get("url")
         if not img_url or img_url in seen_urls:
             continue
