@@ -79,7 +79,7 @@ def demo_image(fname: str):
     return FileResponse(os.path.join(DEMO_DIR, fname))
 
 
-def _scan_web(content: bytes) -> list[dict] | None:
+def _scan_web(content: bytes) -> dict | None:
     """Google Cloud Vision Web Detection으로 실제 인터넷에서 동일/유사 이미지가 쓰인
     웹페이지를 찾는다. 키가 없거나 API 호출이 실패하면 None을 반환해 데모 매칭으로 폴백한다."""
     api_key = os.environ.get("GOOGLE_VISION_API_KEY")
@@ -92,7 +92,7 @@ def _scan_web(content: bytes) -> list[dict] | None:
             json={
                 "requests": [{
                     "image": {"content": base64.b64encode(content).decode()},
-                    "features": [{"type": "WEB_DETECTION", "maxResults": 15}],
+                    "features": [{"type": "WEB_DETECTION", "maxResults": 20}],
                 }]
             },
             timeout=15,
@@ -106,10 +106,15 @@ def _scan_web(content: bytes) -> list[dict] | None:
     pages = web.get("pagesWithMatchingImages", [])
 
     matches = []
-    for page in pages:
+    seen_urls = set()
+    # Vision API는 이미 관련도순으로 정렬해서 주기 때문에, 그 순서를 등수로 환산해
+    # 같은 등급(완전/부분 일치) 안에서도 미세하게 순위를 반영한다.
+    for rank, page in enumerate(pages):
         page_url = page.get("url")
-        if not page_url:
+        if not page_url or page_url in seen_urls:
             continue
+        seen_urls.add(page_url)
+
         thumb = None
         page_full_images = page.get("fullMatchingImages", [])
         page_partial_images = page.get("partialMatchingImages", [])
@@ -119,20 +124,43 @@ def _scan_web(content: bytes) -> list[dict] | None:
             thumb = page_partial_images[0].get("url")
 
         is_full_match = any(img.get("url") in full_match_urls for img in page_full_images)
+        base_score = 95 if is_full_match else 70
+        similarity = round(max(base_score - rank * 0.5, base_score - 10), 1)
+
         matches.append({
             "file": page_url,
-            "similarity": 95.0 if is_full_match else 70.0,
+            "similarity": similarity,
             "shop": page.get("pageTitle") or page_url,
             "price": "-",
-            "note": "웹에서 동일/유사 이미지가 게시된 페이지" if is_full_match else "웹에서 유사 이미지가 게시된 페이지",
+            "note": "웹에서 동일 이미지가 게시된 페이지" if is_full_match else "웹에서 유사 이미지가 게시된 페이지",
             "image_url": thumb,
             "estimated_damage": None,
             "source_url": page_url,
             "source": "web",
         })
 
+    # 게시 페이지를 특정 못 해도, 동일 이미지 자체가 다른 곳에 존재하면 참고용으로 보여준다
+    for img in web.get("visuallySimilarImages", [])[:5]:
+        img_url = img.get("url")
+        if not img_url or img_url in seen_urls:
+            continue
+        seen_urls.add(img_url)
+        matches.append({
+            "file": img_url,
+            "similarity": 50.0,
+            "shop": "게시 페이지 미확인",
+            "price": "-",
+            "note": "이미지 자체는 발견됐지만 게시된 페이지를 특정하지 못했어요",
+            "image_url": img_url,
+            "estimated_damage": None,
+            "source_url": None,
+            "source": "web",
+        })
+
     matches.sort(key=lambda m: -m["similarity"])
-    return matches
+    best_guess = web.get("bestGuessLabels", [])
+    label = best_guess[0]["label"] if best_guess else None
+    return {"matches": matches, "label": label}
 
 
 def _scan_demo(query_img: Image.Image) -> list[dict]:
@@ -172,11 +200,11 @@ async def scan(file: UploadFile = File(...)):
     except Exception:
         raise HTTPException(400, "이미지 파일을 읽을 수 없습니다")
 
-    web_matches = _scan_web(content)
-    if web_matches is not None:
-        return {"matches": web_matches, "mode": "web"}
+    web_result = _scan_web(content)
+    if web_result is not None:
+        return {"matches": web_result["matches"], "mode": "web", "label": web_result["label"]}
 
-    return {"matches": _scan_demo(query_img), "mode": "demo"}
+    return {"matches": _scan_demo(query_img), "mode": "demo", "label": None}
 
 
 class ReportRequest(BaseModel):

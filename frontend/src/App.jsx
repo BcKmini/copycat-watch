@@ -11,6 +11,12 @@ const FEATURES = [
   { title: 'AI 신고서 3종', desc: '사유서·내용증명·손해배상 청구서를 한번에' },
 ]
 
+const ROADMAP = [
+  '다중 이미지 업로드로 스캔 정확도 향상',
+  '정기 자동 모니터링 및 이메일 알림',
+  '플랫폼 신고 API 자동 연동',
+]
+
 function Spinner() {
   return <span className="spinner" aria-hidden="true" />
 }
@@ -41,6 +47,7 @@ function App() {
   const [sellerName, setSellerName] = useState('')
   const [matches, setMatches] = useState([])
   const [scanMode, setScanMode] = useState(null)
+  const [aiLabel, setAiLabel] = useState(null)
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [report, setReport] = useState('')
   const [loading, setLoading] = useState(false)
@@ -82,6 +89,7 @@ function App() {
       const data = await res.json()
       setMatches(data.matches)
       setScanMode(data.mode)
+      setAiLabel(data.label ?? null)
       setMinSimilarity(0)
       setStep(2)
       setHistory((prev) => [
@@ -156,6 +164,7 @@ function App() {
     setSellerName('')
     setMatches([])
     setScanMode(null)
+    setAiLabel(null)
     setSelectedMatch(null)
     setReport('')
     setError('')
@@ -168,6 +177,7 @@ function App() {
     setPreviewUrl(entry.previewUrl)
     setMatches(entry.matches)
     setScanMode(entry.scanMode)
+    setAiLabel(null)
     setMinSimilarity(0)
     setStep(2)
     setHistoryOpen(false)
@@ -181,6 +191,7 @@ function App() {
   }
 
   const visibleMatches = matches.filter((m) => m.similarity >= minSimilarity)
+  const totalDamage = matches.reduce((sum, m) => sum + (m.estimated_damage ?? 0), 0)
 
   return (
     <div className="page">
@@ -293,6 +304,15 @@ function App() {
               {loading ? <><Spinner /> 스캔 중...</> : 'AI로 도용 스캔하기'}
             </button>
           </section>
+
+          <div className="roadmap">
+            <span className="roadmap-label">다음 업데이트 예정</span>
+            <ul>
+              {ROADMAP.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
         </>
       )}
 
@@ -311,6 +331,27 @@ function App() {
               Google Vision API 키가 설정되지 않아 데모 데이터셋 안에서만 찾은 결과예요.
               실제 웹 검색을 켜려면 백엔드에 GOOGLE_VISION_API_KEY를 설정하세요.
             </p>
+          )}
+          {aiLabel && (
+            <p className="card-desc">AI가 인식한 상품 종류: <strong>{aiLabel}</strong></p>
+          )}
+          {matches.length > 0 && (
+            <div className="stats-bar">
+              <div className="stat">
+                <span className="stat-value">{matches.length}건</span>
+                <span className="stat-label">발견된 도용 의심</span>
+              </div>
+              <div className="stat">
+                <span className="stat-value">{Math.round(matches[0]?.similarity ?? 0)}%</span>
+                <span className="stat-label">최고 유사도</span>
+              </div>
+              {totalDamage > 0 && (
+                <div className="stat">
+                  <span className="stat-value">{totalDamage.toLocaleString()}원</span>
+                  <span className="stat-label">예상 피해액 합계</span>
+                </div>
+              )}
+            </div>
           )}
           {matches.length === 0 ? (
             <div className="empty">
