@@ -434,17 +434,6 @@ button:disabled {
   color: var(--amber-ink);
 }
 
-.platform-field select {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--ink);
-  background: var(--field-bg);
-  font-family: inherit;
-}
-
 .badge {
   display: inline-flex;
   align-self: flex-start;
@@ -694,18 +683,44 @@ button:disabled {
 
 .result-controls {
   display: flex;
+  align-items: flex-end;
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 16px;
 }
 
-.result-controls .platform-field {
+.result-controls .slider-field {
   flex: 1;
   min-width: 160px;
+  margin-bottom: 0;
 }
 
 .result-controls input[type='range'] {
   accent-color: var(--accent);
+}
+
+.ghost.toggle {
+  background: var(--field-bg);
+  border: 1px solid var(--border);
+}
+
+.ghost.toggle.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.match-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.match-item.selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
 }
 
 .match-actions {
@@ -717,6 +732,49 @@ button:disabled {
 .ghost.small {
   padding: 8px 12px;
   font-size: 12.5px;
+}
+
+.unattributed-section {
+  margin-top: 4px;
+}
+
+.unattributed-toggle {
+  width: 100%;
+  justify-content: center;
+  color: var(--ink-faint);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.unattributed-section .match-list {
+  margin-top: 4px;
+}
+
+.result-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.result-footer-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dashboard-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.dashboard-stats .stat {
+  background: var(--bg);
 }
 
 .match-thumb {

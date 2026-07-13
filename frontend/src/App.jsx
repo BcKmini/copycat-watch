@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
@@ -32,6 +32,12 @@ function StepIndicator({ step }) {
   )
 }
 
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[c])
+}
+
 function App() {
   const [step, setStep] = useState(1)
   const [file, setFile] = useState(null)
@@ -44,14 +50,17 @@ function App() {
   const [aiLabel, setAiLabel] = useState(null)
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [report, setReport] = useState('')
+  const [reportMode, setReportMode] = useState('single')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
-  const [platform, setPlatform] = useState('오픈마켓 일반')
   const [compareMatch, setCompareMatch] = useState(null)
   const [history, setHistory] = useState([])
-  const [historyOpen, setHistoryOpen] = useState(false)
+  const [dashboardOpen, setDashboardOpen] = useState(false)
   const [minSimilarity, setMinSimilarity] = useState(0)
+  const [batchMode, setBatchMode] = useState(false)
+  const [selectedForBatch, setSelectedForBatch] = useState(new Set())
+  const [showUnattributed, setShowUnattributed] = useState(false)
   const fileInputRef = useRef(null)
 
   const applyFile = (f) => {
@@ -85,6 +94,9 @@ function App() {
       setScanMode(data.mode)
       setAiLabel(data.label ?? null)
       setMinSimilarity(0)
+      setBatchMode(false)
+      setSelectedForBatch(new Set())
+      setShowUnattributed(false)
       setStep(2)
       setHistory((prev) => [
         {
@@ -119,7 +131,6 @@ function App() {
           match_shop: match.shop,
           match_note: match.note,
           similarity: match.similarity,
-          platform,
           source_url: match.source_url ?? null,
           estimated_damage: match.estimated_damage ?? null,
         }),
@@ -127,6 +138,40 @@ function App() {
       if (!res.ok) throw new Error('신고서 생성 실패')
       const data = await res.json()
       setReport(data.report)
+      setReportMode('single')
+      setStep(3)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const runBatchReport = async () => {
+    const selected = matches.filter((m) => selectedForBatch.has(m.file))
+    if (selected.length === 0) return
+    setError('')
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/report/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_name: productName,
+          seller_name: sellerName || '본인',
+          matches: selected.map((m) => ({
+            shop: m.shop,
+            note: m.note,
+            similarity: m.similarity,
+            source_url: m.source_url ?? null,
+            estimated_damage: m.estimated_damage ?? null,
+          })),
+        }),
+      })
+      if (!res.ok) throw new Error('통합 신고서 생성 실패')
+      const data = await res.json()
+      setReport(data.report)
+      setReportMode('batch')
       setStep(3)
     } catch (err) {
       setError(err.message)
@@ -151,6 +196,50 @@ function App() {
     URL.revokeObjectURL(url)
   }
 
+  const downloadEvidenceBundle = () => {
+    const rows = visibleMatches.map((m) => `
+      <tr>
+        <td>${m.image_url ? `<img src="${escapeHtml(resolveImageUrl(m.image_url))}" />` : '-'}</td>
+        <td>${escapeHtml(m.shop)}</td>
+        <td>${m.similarity}%${m.verified ? ' <span class="v">실측검증</span>' : ''}</td>
+        <td>${escapeHtml(m.note)}</td>
+        <td>${m.source_url ? `<a href="${escapeHtml(m.source_url)}">바로가기</a>` : '-'}</td>
+        <td>${m.estimated_damage != null ? m.estimated_damage.toLocaleString() + '원' : '-'}</td>
+      </tr>`).join('')
+
+    const html = `<!doctype html><html><head><meta charset="utf-8">
+<title>증거 리포트 - ${escapeHtml(productName)}</title>
+<style>
+  body{font-family:-apple-system,'Malgun Gothic',sans-serif;max-width:900px;margin:40px auto;padding:0 20px;color:#14141a}
+  h1{font-size:22px;margin-bottom:4px}
+  .meta{color:#666;font-size:13px;margin:4px 0}
+  table{width:100%;border-collapse:collapse;margin-top:24px}
+  th,td{border:1px solid #ddd;padding:10px;text-align:left;font-size:13px;vertical-align:middle}
+  th{background:#f4f4f8}
+  img{width:64px;height:64px;object-fit:cover;border-radius:8px}
+  .v{color:#1e8a4c;font-weight:700;font-size:11px}
+  .footer{color:#999;font-size:12px;margin-top:24px}
+  @media print{ body{margin:0} }
+</style></head><body>
+  <h1>도용 탐지 증거 리포트</h1>
+  <p class="meta">상품명: ${escapeHtml(productName)} · 생성일: ${new Date().toLocaleString('ko-KR')}</p>
+  <p class="meta">AI 인식 상품 종류: ${escapeHtml(aiLabel || '-')} · 발견 건수: ${visibleMatches.length}건 · 예상 피해액 합계: ${totalDamage.toLocaleString()}원</p>
+  <table>
+    <thead><tr><th>이미지</th><th>발견 위치</th><th>유사도</th><th>정황</th><th>링크</th><th>예상 피해액</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p class="footer">카피캣 워치로 생성된 증거 리포트입니다. 실제 신고·법적 조치 전 전문가 검토를 권장합니다.</p>
+</body></html>`
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${productName || '증거리포트'}_카피캣워치.html`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const goBackToResults = () => {
     setStep(2)
     setReport('')
@@ -169,8 +258,9 @@ function App() {
     setSelectedMatch(null)
     setReport('')
     setError('')
-    setPlatform('오픈마켓 일반')
     setMinSimilarity(0)
+    setBatchMode(false)
+    setSelectedForBatch(new Set())
   }
 
   const openHistoryEntry = (entry) => {
@@ -180,11 +270,79 @@ function App() {
     setScanMode(entry.scanMode)
     setAiLabel(entry.aiLabel ?? null)
     setMinSimilarity(0)
+    setBatchMode(false)
+    setSelectedForBatch(new Set())
     setStep(2)
-    setHistoryOpen(false)
+    setDashboardOpen(false)
+  }
+
+  const toggleBatchSelect = (file) => {
+    setSelectedForBatch((prev) => {
+      const next = new Set(prev)
+      if (next.has(file)) next.delete(file)
+      else next.add(file)
+      return next
+    })
   }
 
   const severity = (similarity) => (similarity >= 60 ? 'high' : 'mid')
+
+  const renderMatchCard = (m) => (
+    <li key={m.file} className={`match-item ${selectedForBatch.has(m.file) ? 'selected' : ''}`}>
+      {batchMode && (
+        <input
+          type="checkbox"
+          className="match-checkbox"
+          checked={selectedForBatch.has(m.file)}
+          onChange={() => toggleBatchSelect(m.file)}
+        />
+      )}
+      {m.image_url && (
+        <img
+          className="match-thumb"
+          src={resolveImageUrl(m.image_url)}
+          alt=""
+          onClick={() => setCompareMatch(m)}
+        />
+      )}
+      <div className="match-info">
+        <span className="badge-row">
+          <span className={`badge badge-${severity(m.similarity)}`}>
+            유사도 {m.similarity}%
+          </span>
+          {m.verified && <span className="badge badge-verified">실측 검증</span>}
+        </span>
+        <strong>{m.shop}</strong>
+        <span className="note">{m.note}</span>
+        {m.price !== '-' && <span className="price">판매가 {m.price}</span>}
+        {m.estimated_damage != null && (
+          <span className="damage">예상 피해액 {m.estimated_damage.toLocaleString()}원</span>
+        )}
+        {m.source_url && (
+          <a
+            className="source-link"
+            href={m.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            게시물 바로가기 ↗
+          </a>
+        )}
+      </div>
+      {!batchMode && (
+        <div className="match-actions">
+          {m.image_url && (
+            <button className="ghost small" onClick={() => setCompareMatch(m)}>
+              비교하기
+            </button>
+          )}
+          <button className="secondary" onClick={() => runReport(m)} disabled={loading}>
+            {loading && selectedMatch?.file === m.file ? <Spinner /> : '신고서 작성'}
+          </button>
+        </div>
+      )}
+    </li>
+  )
 
   const resolveImageUrl = (url) => {
     if (!url) return null
@@ -193,6 +351,17 @@ function App() {
 
   const visibleMatches = matches.filter((m) => m.similarity >= minSimilarity)
   const totalDamage = visibleMatches.reduce((sum, m) => sum + (m.estimated_damage ?? 0), 0)
+  const attributedMatches = visibleMatches.filter((m) => m.source_url)
+  const unattributedMatches = visibleMatches.filter((m) => !m.source_url)
+
+  const dashboardStats = useMemo(() => ({
+    scans: history.length,
+    found: history.reduce((s, h) => s + h.matches.length, 0),
+    damage: history.reduce(
+      (s, h) => s + h.matches.reduce((s2, m) => s2 + (m.estimated_damage ?? 0), 0),
+      0,
+    ),
+  }), [history])
 
   return (
     <div className="page">
@@ -203,8 +372,8 @@ function App() {
             <span className="brand-name">카피캣 워치</span>
           </div>
           {history.length > 0 && (
-            <button className="history-toggle" onClick={() => setHistoryOpen((v) => !v)}>
-              스캔 이력 ({history.length})
+            <button className="history-toggle" onClick={() => setDashboardOpen((v) => !v)}>
+              대시보드
             </button>
           )}
         </div>
@@ -212,25 +381,35 @@ function App() {
         <StepIndicator step={step} />
       </header>
 
-      {historyOpen && (
+      {dashboardOpen && (
         <div className="history-panel">
-          {history.length === 0 ? (
-            <p className="empty-text">아직 스캔 이력이 없어요.</p>
-          ) : (
-            <ul>
-              {history.map((entry) => (
-                <li key={entry.id}>
-                  <button className="history-item" onClick={() => openHistoryEntry(entry)}>
-                    {entry.previewUrl && <img src={entry.previewUrl} alt="" />}
-                    <span className="history-item-info">
-                      <strong>{entry.productName}</strong>
-                      <span>{entry.matches.length}건 발견 · {entry.timestamp}</span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="dashboard-stats">
+            <div className="stat">
+              <span className="stat-value">{dashboardStats.scans}회</span>
+              <span className="stat-label">총 스캔</span>
+            </div>
+            <div className="stat">
+              <span className="stat-value">{dashboardStats.found}건</span>
+              <span className="stat-label">누적 발견</span>
+            </div>
+            <div className="stat">
+              <span className="stat-value">{dashboardStats.damage.toLocaleString()}원</span>
+              <span className="stat-label">누적 예상 피해액</span>
+            </div>
+          </div>
+          <ul>
+            {history.map((entry) => (
+              <li key={entry.id}>
+                <button className="history-item" onClick={() => openHistoryEntry(entry)}>
+                  {entry.previewUrl && <img src={entry.previewUrl} alt="" />}
+                  <span className="history-item-info">
+                    <strong>{entry.productName}</strong>
+                    <span>{entry.matches.length}건 발견 · {entry.timestamp}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -356,17 +535,7 @@ function App() {
           ) : (
             <>
               <div className="result-controls">
-                <label className="field platform-field">
-                  신고 대상 플랫폼
-                  <select value={platform} onChange={(e) => setPlatform(e.target.value)}>
-                    <option>오픈마켓 일반</option>
-                    <option>스마트스토어</option>
-                    <option>쿠팡</option>
-                    <option>인스타그램</option>
-                    <option>기타 SNS</option>
-                  </select>
-                </label>
-                <label className="field platform-field">
+                <label className="field slider-field">
                   최소 유사도 {minSimilarity}%
                   <input
                     type="range"
@@ -377,70 +546,74 @@ function App() {
                     onChange={(e) => setMinSimilarity(Number(e.target.value))}
                   />
                 </label>
+                <button
+                  className={`ghost small toggle ${batchMode ? 'active' : ''}`}
+                  onClick={() => {
+                    setBatchMode((v) => !v)
+                    setSelectedForBatch(new Set())
+                  }}
+                >
+                  {batchMode ? '일괄 선택 취소' : '여러 건 선택'}
+                </button>
               </div>
 
               {visibleMatches.length === 0 ? (
                 <p className="empty-text">필터 조건에 맞는 결과가 없어요. 최소 유사도를 낮춰보세요.</p>
               ) : (
-                <ul className="match-list">
-                  {visibleMatches.map((m) => (
-                    <li key={m.file} className="match-item">
-                      {m.image_url && (
-                        <img
-                          className="match-thumb"
-                          src={resolveImageUrl(m.image_url)}
-                          alt=""
-                          onClick={() => setCompareMatch(m)}
-                        />
+                <>
+                  {attributedMatches.length > 0 && (
+                    <ul className="match-list">{attributedMatches.map(renderMatchCard)}</ul>
+                  )}
+                  {unattributedMatches.length > 0 && (
+                    <div className="unattributed-section">
+                      <button
+                        className="ghost small unattributed-toggle"
+                        onClick={() => setShowUnattributed((v) => !v)}
+                      >
+                        {showUnattributed
+                          ? '접기 ▲'
+                          : `게시 페이지가 확인되지 않은 동일/유사 이미지 ${unattributedMatches.length}건 더보기 ▼`}
+                      </button>
+                      {showUnattributed && (
+                        <ul className="match-list">{unattributedMatches.map(renderMatchCard)}</ul>
                       )}
-                      <div className="match-info">
-                        <span className="badge-row">
-                          <span className={`badge badge-${severity(m.similarity)}`}>
-                            유사도 {m.similarity}%
-                          </span>
-                          {m.verified && <span className="badge badge-verified">실측 검증</span>}
-                        </span>
-                        <strong>{m.shop}</strong>
-                        <span className="note">{m.note}</span>
-                        {m.price !== '-' && <span className="price">판매가 {m.price}</span>}
-                        {m.estimated_damage != null && (
-                          <span className="damage">예상 피해액 {m.estimated_damage.toLocaleString()}원</span>
-                        )}
-                        {m.source_url && (
-                          <a
-                            className="source-link"
-                            href={m.source_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            게시물 바로가기 ↗
-                          </a>
-                        )}
-                      </div>
-                      <div className="match-actions">
-                        {m.image_url && (
-                          <button className="ghost small" onClick={() => setCompareMatch(m)}>
-                            비교하기
-                          </button>
-                        )}
-                        <button className="secondary" onClick={() => runReport(m)} disabled={loading}>
-                          {loading && selectedMatch?.file === m.file ? <Spinner /> : '신고서 작성'}
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
-          <button className="ghost" onClick={reset}>처음으로</button>
+
+          <div className="result-footer">
+            <button className="ghost" onClick={reset}>← 새로 스캔하기</button>
+            <div className="result-footer-actions">
+              {batchMode && (
+                <button
+                  className="primary"
+                  onClick={runBatchReport}
+                  disabled={loading || selectedForBatch.size === 0}
+                >
+                  {loading ? <Spinner /> : `선택 ${selectedForBatch.size}건 통합 신고서 생성`}
+                </button>
+              )}
+              {visibleMatches.length > 0 && (
+                <button className="secondary" onClick={downloadEvidenceBundle}>
+                  증거 리포트 다운로드
+                </button>
+              )}
+            </div>
+          </div>
         </section>
       )}
 
       {step === 3 && (
         <section className="card">
-          <h2>신고서 초안</h2>
-          <p className="card-desc">신고 사유서 · 내용증명 · 손해배상 청구내역서예요. 필요한 부분을 수정해서 사용하세요.</p>
+          <h2>{reportMode === 'batch' ? '통합 신고서 초안' : '신고서 초안'}</h2>
+          <p className="card-desc">
+            {reportMode === 'batch'
+              ? '선택한 모든 도용 사례를 묶은 통합 신고 사유서 · 내용증명이에요.'
+              : '신고 사유서 · 내용증명 · 손해배상 청구내역서예요.'} 필요한 부분을 수정해서 사용하세요.
+          </p>
           <pre className="report-box">{report}</pre>
           <div className="button-row">
             <button className="secondary" onClick={copyReport}>

@@ -19,7 +19,7 @@ await page.setInputFiles('input[type="file"]', IMG)
 await page.screenshot({ path: `screenshots/02-upload-${COLOR_SCHEME}.png`, fullPage: true })
 
 await page.click('button:has-text("AI로 도용 스캔하기")')
-await page.waitForSelector('text=처음으로', { timeout: 60000 })
+await page.waitForSelector('text=새로 스캔하기', { timeout: 60000 })
 await page.screenshot({ path: `screenshots/03-results-${COLOR_SCHEME}.png`, fullPage: true })
 
 console.log('ERRORS:', errors.length ? errors : 'none')

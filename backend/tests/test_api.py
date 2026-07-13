@@ -149,3 +149,44 @@ def test_report_with_estimated_damage_includes_amount_in_document(client, monkey
     )
     assert resp.status_code == 200
     assert "123,400원" in resp.json()["report"]
+
+
+def test_report_auto_detects_platform_from_url(client, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    resp = client.post(
+        "/api/report",
+        json={
+            "product_name": "테스트 상품",
+            "match_shop": "어떤 쇼핑몰",
+            "match_note": "테스트 정황",
+            "similarity": 90.0,
+            "source_url": "https://www.coupang.com/vp/products/12345",
+        },
+    )
+    assert resp.status_code == 200
+    assert "쿠팡" in resp.json()["report"]
+
+
+def test_batch_report_combines_multiple_matches(client, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    resp = client.post(
+        "/api/report/batch",
+        json={
+            "product_name": "테스트 상품",
+            "matches": [
+                {"shop": "판매처 A", "note": "정황 A", "similarity": 95.0, "estimated_damage": 50000},
+                {"shop": "판매처 B", "note": "정황 B", "similarity": 88.0, "estimated_damage": 30000},
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    report = resp.json()["report"]
+    assert "판매처 A" in report
+    assert "판매처 B" in report
+    assert "문서1" in report
+    assert "문서2" in report
+
+
+def test_batch_report_rejects_empty_matches(client):
+    resp = client.post("/api/report/batch", json={"product_name": "테스트 상품", "matches": []})
+    assert resp.status_code == 400
