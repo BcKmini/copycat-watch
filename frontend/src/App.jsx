@@ -183,6 +183,35 @@ function App() {
     }
   }
 
+  const runLegalGuide = async () => {
+    if (visibleMatches.length === 0) return
+    setError('')
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/legal-guide`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_name: productName,
+          total_matches: visibleMatches.length,
+          verified_matches: visibleMatches.filter((m) => m.verified).length,
+          total_damage: totalDamage,
+          repeated_infringement: visibleMatches.length >= 5,
+        }),
+      })
+      if (!res.ok) throw new Error('법적 대응 가이드 생성 실패')
+      const data = await res.json()
+      setReport(data.report)
+      setReportMode('legal')
+      setReportAiGenerated(data.ai_generated ?? true)
+      setStep(3)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const copyReport = () => {
     navigator.clipboard.writeText(report)
     setCopied(true)
@@ -617,6 +646,11 @@ function App() {
                 </button>
               )}
               {visibleMatches.length > 0 && (
+                <button className="secondary" onClick={runLegalGuide} disabled={loading}>
+                  AI 법적 대응 가이드
+                </button>
+              )}
+              {visibleMatches.length > 0 && (
                 <button className="secondary" onClick={downloadEvidenceBundle}>
                   증거 리포트 다운로드
                 </button>
@@ -628,11 +662,13 @@ function App() {
 
       {step === 3 && (
         <section className="card">
-          <h2>{reportMode === 'batch' ? '통합 신고서 초안' : '신고서 초안'}</h2>
+          <h2>{reportMode === 'batch' ? '통합 신고서 초안' : reportMode === 'legal' ? 'AI 법적 대응 가이드' : '신고서 초안'}</h2>
           <p className="card-desc">
             {reportMode === 'batch'
               ? '선택한 모든 도용 사례를 묶은 통합 신고 사유서 · 내용증명이에요.'
-              : '신고 사유서 · 내용증명 · 손해배상 청구내역서예요.'} 필요한 부분을 수정해서 사용하세요.
+              : reportMode === 'legal'
+                ? '지금 상황(발견 건수·피해액)에 맞춘 대응 순서와 무료 법률상담처 안내예요. 일반적인 절차 안내이며 구체적 법률 자문이 아니에요.'
+                : '신고 사유서 · 내용증명 · 손해배상 청구내역서예요.'} 필요한 부분을 수정해서 사용하세요.
           </p>
           {!reportAiGenerated && (
             <p className="ai-fallback-notice">

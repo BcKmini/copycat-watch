@@ -651,3 +651,91 @@ def generate_batch_report(req: BatchReportRequest):
         messages=[{"role": "user", "content": user_prompt}],
     )
     return {"report": resp.content[0].text, "ai_generated": True}
+
+
+# 실제 절차 조사 결과(2026-07 기준):
+# - 소액사건심판법 제2조: 소가 3,000만원 이하 민사 제1심 사건 대상 (2017.1.1.부터 시행된 기준)
+# - 저작권법 제125조: 손해배상 청구 시 침해자의 이익액을 손해액으로 추정
+# - 한국저작권위원회 저작권 상담센터: 창작자·소상공인 대상 무료 저작권 법률 컨설팅
+# - 대한법률구조공단: 국번없이 132, 경제적 어려움이 있는 국민 대상 무료 법률상담/소송대리
+LEGAL_RESOURCES = (
+    "한국저작권위원회 저작권 상담센터(copyright.or.kr, 무료 저작권 법률 컨설팅), "
+    "대한법률구조공단(국번없이 132, 무료 법률상담 및 요건 충족 시 무료 소송대리)"
+)
+
+
+class LegalGuideRequest(BaseModel):
+    product_name: str
+    total_matches: int
+    verified_matches: int
+    total_damage: int = 0
+    repeated_infringement: bool = False
+
+
+LEGAL_GUIDE_SYSTEM_PROMPT = """너는 소상공인에게 저작권 침해 대응 절차를 안내하는
+어시스턴트야. 아래 실제 한국 법 절차를 근거로, 지금 상황에 맞는 "법적 대응 가이드"를
+한국어로 작성해 (문서가 아니라 행동 순서를 안내하는 가이드 형식).
+
+포함할 내용:
+1. 우선순위 대응 순서: 통상 (a) 플랫폼 신고로 게시물 우선 차단 (b) 내용증명 발송으로
+   공식 경고 및 소멸시효 중단 (c) 그래도 미해결 시 민형사 절차, 순서로 진행하는 게
+   일반적임을 안내.
+2. 민사/형사 대응 가능성: 저작권법 제125조(손해배상 청구 시 침해자 이익액을 손해액으로
+   추정) 및 저작권법상 형사 고소(친고죄 여부는 사안에 따라 다름) 가능성을 안내.
+3. 소송 형태 판단: 예상 피해액이 3,000만원 이하면 소액사건심판법 제2조에 따른
+   소액사건심판(신속 처리, 1회 변론기일 원칙)을 활용할 수 있고, 초과하면 일반 민사
+   소송 절차가 필요함을 안내. 반복적 도용이 확인된 경우 손해액이 커질 수 있어 정식
+   소송도 검토할 수 있음을 언급.
+4. 무료 법률 지원 연결처를 안내: 한국저작권위원회 저작권 상담센터(무료 법률 컨설팅),
+   대한법률구조공단(국번없이 132, 무료 법률상담).
+5. 유의사항: 본 가이드는 일반적인 절차 안내이며 구체적 법률 자문이 아니므로, 실제 진행
+   전 위 상담처를 통해 전문가 확인을 권장한다는 점을 명시.
+
+서론 없이 바로 가이드 본문만 출력해. 번호 매긴 섹션으로 구성해."""
+
+
+@app.post("/api/legal-guide")
+def generate_legal_guide(req: LegalGuideRequest):
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    is_small_claim = req.total_damage <= 30_000_000
+    user_prompt = (
+        f"상품명: {req.product_name}\n"
+        f"발견된 도용 의심 건수: {req.total_matches}건 (이 중 실측 검증 {req.verified_matches}건)\n"
+        f"예상 피해액 합계: {_format_amount(req.total_damage) if req.total_damage else '산정 불가'}\n"
+        f"반복적/조직적 도용 여부: {'예' if req.repeated_infringement else '아니오'}\n"
+        f"소액사건심판(소가 3,000만원 이하) 해당 여부: {'해당' if is_small_claim else '해당하지 않음(일반 민사소송 검토 필요)'}\n"
+    )
+
+    if not api_key:
+        claim_line = (
+            f"예상 피해액이 {_format_amount(req.total_damage)}으로 소가 3,000만원 이하 기준에 해당해, "
+            "소액사건심판법 제2조에 따른 소액사건심판(1회 변론기일 원칙의 신속 절차)을 활용할 수 있습니다."
+            if req.total_damage and is_small_claim
+            else "예상 피해액이 3,000만원을 초과하거나 산정되지 않아, 일반 민사소송 절차 검토가 필요합니다."
+        )
+        return {
+            "report": (
+                "1. 우선순위 대응 순서\n"
+                "게시물 삭제가 급하다면 플랫폼 신고를 먼저 진행하고, 공식적인 경고와 증거 확보를 위해 "
+                "내용증명을 함께 발송하는 것이 일반적입니다. 이후에도 해결되지 않으면 민형사 절차를 검토합니다.\n\n"
+                "2. 민사/형사 대응 가능성\n"
+                "저작권법 제125조에 따라 침해자가 그 침해행위로 얻은 이익액을 저작재산권자의 손해액으로 "
+                "추정하여 손해배상을 청구할 수 있습니다. 사안에 따라 저작권법 위반으로 형사 고소도 가능합니다.\n\n"
+                f"3. 소송 형태 판단\n{claim_line}\n"
+                f"{'반복적/조직적 도용 정황이 확인되어 손해액이 커질 수 있으므로 정식 소송도 함께 검토해볼 만합니다.' if req.repeated_infringement else ''}\n\n"
+                f"4. 무료 법률 지원 연결처\n{LEGAL_RESOURCES}\n\n"
+                "5. 유의사항\n"
+                "본 가이드는 일반적인 절차 안내이며 구체적인 법률 자문이 아닙니다. "
+                "실제 진행 전 위 상담처를 통해 전문가 확인을 받으시길 권장합니다."
+            ),
+            "ai_generated": False,
+        }
+
+    client = Anthropic(api_key=api_key)
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=1536,
+        system=LEGAL_GUIDE_SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": user_prompt}],
+    )
+    return {"report": resp.content[0].text, "ai_generated": True}

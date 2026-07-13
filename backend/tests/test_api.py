@@ -227,3 +227,37 @@ def test_dedupe_keeps_distinct_pages():
     ]
     result = main._dedupe_matches(matches)
     assert len(result) == 3
+
+
+def test_legal_guide_without_api_key_mentions_small_claims_threshold(client, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    resp = client.post(
+        "/api/legal-guide",
+        json={
+            "product_name": "테스트 상품",
+            "total_matches": 5,
+            "verified_matches": 5,
+            "total_damage": 500000,
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ai_generated"] is False
+    assert "소액사건심판" in data["report"]
+    assert "132" in data["report"]
+
+
+def test_legal_guide_over_small_claims_threshold_suggests_regular_lawsuit(client, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    resp = client.post(
+        "/api/legal-guide",
+        json={
+            "product_name": "테스트 상품",
+            "total_matches": 20,
+            "verified_matches": 18,
+            "total_damage": 50_000_000,
+            "repeated_infringement": True,
+        },
+    )
+    assert resp.status_code == 200
+    assert "일반 민사소송" in resp.json()["report"]
