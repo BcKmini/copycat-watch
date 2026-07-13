@@ -16,10 +16,11 @@ from fastapi.responses import FileResponse
 from PIL import Image
 from pydantic import BaseModel
 
+from matching import SIMILARITY_THRESHOLD, query_hashes, similarity_from_hashes
+
 load_dotenv()
 
 DEMO_DIR = os.path.join(os.path.dirname(__file__), "demo_data")
-SIMILARITY_THRESHOLD = 35  # 이 이상만 '도용 의심'으로 표시 (실사 기반 데모 데이터로 튜닝한 값)
 ASSUMED_MONTHLY_SALES = 20  # 예상 피해액 계산용 가정치 (데모 - 실제 서비스에선 플랫폼 판매지수 연동 필요)
 
 
@@ -164,16 +165,13 @@ def _scan_web(content: bytes) -> dict | None:
 
 
 def _scan_demo(query_img: Image.Image) -> list[dict]:
-    query_hash = imagehash.phash(query_img)
-    query_flip_hash = imagehash.phash(query_img.transpose(Image.FLIP_LEFT_RIGHT))
+    query_hash, query_flip_hash = query_hashes(query_img)
 
     matches = []
     for fname, h in _demo_hashes.items():
         if "original" in fname or "unrelated" in fname:
             continue
-        # 좌우반전 도용까지 잡기 위해 원본/반전 해시 중 더 가까운 쪽을 사용
-        distance = int(min(query_hash - h, query_flip_hash - h))
-        similarity = round(max(0, 100 - distance * 3), 1)
+        similarity = similarity_from_hashes(query_hash, query_flip_hash, h)
         if similarity >= SIMILARITY_THRESHOLD:
             listing = _listings.get(fname, {"shop": "알 수 없는 판매처", "price": "-", "note": ""})
             matches.append({

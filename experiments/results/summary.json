@@ -1,0 +1,25 @@
+{
+  "dataset_size": 18,
+  "total_pairs": 648,
+  "production_threshold": 35,
+  "production_metrics": {
+    "threshold": 35,
+    "tp": 36,
+    "fp": 6,
+    "fn": 0,
+    "tn": 606,
+    "precision": 0.857,
+    "recall": 1.0,
+    "f1": 0.923
+  },
+  "best_f1_threshold": {
+    "threshold": 45,
+    "tp": 36,
+    "fp": 1,
+    "fn": 0,
+    "tn": 611,
+    "precision": 0.973,
+    "recall": 1.0,
+    "f1": 0.986
+  }
+}
