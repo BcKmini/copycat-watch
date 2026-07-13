@@ -544,9 +544,9 @@ def generate_report(req: ReportRequest):
                 "본 내용증명은 우체국 내용증명 우편으로 발송해 발신 사실과 도달을 증명하는 것을 권장합니다 "
                 "(총 3부 작성: 발신인 보관용 / 수신인 발송용 / 우체국 보관용).\n\n"
                 "---문서3---\n"
-                f"[손해배상 청구 내역서 - 임시 템플릿]\n{damage_doc}\n\n"
-                "[ANTHROPIC_API_KEY 미설정 - console.anthropic.com에서 키 발급 후 .env에 추가하면 AI가 상황별로 맞춤 작성합니다]"
-            )
+                f"[손해배상 청구 내역서 - 임시 템플릿]\n{damage_doc}"
+            ),
+            "ai_generated": False,
         }
 
     client = Anthropic(api_key=api_key)
@@ -556,7 +556,7 @@ def generate_report(req: ReportRequest):
         system=REPORT_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_prompt}],
     )
-    return {"report": resp.content[0].text}
+    return {"report": resp.content[0].text, "ai_generated": True}
 
 
 class BatchMatchItem(BaseModel):
@@ -638,9 +638,9 @@ def generate_batch_report(req: BatchReportRequest):
                 "4. 위 기한 내 이행되지 않을 경우, 저작권법 위반에 따른 민형사상 법적 조치(고소 및 손해배상 청구 소송)를 "
                 "진행할 수 있음을 알려드립니다.\n\n"
                 "본 내용증명은 우체국 내용증명 우편으로 발송해 발신 사실과 도달을 증명하는 것을 권장합니다 "
-                "(총 3부 작성: 발신인 보관용 / 수신인 발송용 / 우체국 보관용).\n\n"
-                "[ANTHROPIC_API_KEY 미설정 - console.anthropic.com에서 키 발급 후 .env에 추가하면 AI가 상황별로 맞춤 작성합니다]"
-            )
+                "(총 3부 작성: 발신인 보관용 / 수신인 발송용 / 우체국 보관용)."
+            ),
+            "ai_generated": False,
         }
 
     client = Anthropic(api_key=api_key)
@@ -650,4 +650,4 @@ def generate_batch_report(req: BatchReportRequest):
         system=BATCH_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_prompt}],
     )
-    return {"report": resp.content[0].text}
+    return {"report": resp.content[0].text, "ai_generated": True}

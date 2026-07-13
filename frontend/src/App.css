@@ -191,6 +191,20 @@ body {
   margin: 0 0 20px;
 }
 
+.ai-fallback-notice {
+  background: var(--amber-bg);
+  color: var(--amber-ink);
+  font-size: 12.5px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  margin: -8px 0 16px;
+}
+
+.ai-fallback-notice code {
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-weight: 700;
+}
+
 .field {
   display: flex;
   flex-direction: column;

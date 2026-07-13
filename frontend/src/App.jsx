@@ -51,6 +51,7 @@ function App() {
   const [selectedMatch, setSelectedMatch] = useState(null)
   const [report, setReport] = useState('')
   const [reportMode, setReportMode] = useState('single')
+  const [reportAiGenerated, setReportAiGenerated] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -139,6 +140,7 @@ function App() {
       const data = await res.json()
       setReport(data.report)
       setReportMode('single')
+      setReportAiGenerated(data.ai_generated ?? true)
       setStep(3)
     } catch (err) {
       setError(err.message)
@@ -172,6 +174,7 @@ function App() {
       const data = await res.json()
       setReport(data.report)
       setReportMode('batch')
+      setReportAiGenerated(data.ai_generated ?? true)
       setStep(3)
     } catch (err) {
       setError(err.message)
@@ -631,6 +634,12 @@ function App() {
               ? '선택한 모든 도용 사례를 묶은 통합 신고 사유서 · 내용증명이에요.'
               : '신고 사유서 · 내용증명 · 손해배상 청구내역서예요.'} 필요한 부분을 수정해서 사용하세요.
           </p>
+          {!reportAiGenerated && (
+            <p className="ai-fallback-notice">
+              AI 없이 고정 템플릿으로 생성됐어요. <code>ANTHROPIC_API_KEY</code>를 설정하면
+              상황에 맞게 AI가 직접 작성해줘요.
+            </p>
+          )}
           <pre className="report-box">{report}</pre>
           <div className="button-row">
             <button className="secondary" onClick={copyReport}>
