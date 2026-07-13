@@ -7,6 +7,7 @@ import re
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date
+from urllib.parse import urljoin
 
 import imagehash
 import requests
@@ -86,10 +87,20 @@ def demo_image(fname: str):
 
 
 FETCH_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) CopycatWatch/1.0"}
-VERIFY_TIMEOUT = 6  # 후보 이미지 1장 다운로드 제한시간(초)
+VERIFY_TIMEOUT = 5  # 후보 이미지 1장 다운로드 제한시간(초)
 VERIFY_MAX_BYTES = 5 * 1024 * 1024  # 후보 이미지 최대 크기
-VERIFY_WORKERS = 16
-WEB_RESULT_LIMIT = 15
+VERIFY_WORKERS = 32
+WEB_RESULT_LIMIT = 50
+PAGE_TIMEOUT = 8  # 페이지 HTML 다운로드 제한시간(초)
+PAGE_MAX_BYTES = 2 * 1024 * 1024  # 페이지 HTML 최대 크기
+PAGE_MAX_IMAGES = 4  # 페이지 안에서 대조해볼 이미지 최대 개수
+
+_OG_IMAGE_RE = re.compile(
+    r'<meta[^>]+(?:property|name)=["\']og:image["\'][^>]*content=["\']([^"\']+)["\']'
+    r'|<meta[^>]+content=["\']([^"\']+)["\'][^>]*(?:property|name)=["\']og:image["\']',
+    re.IGNORECASE,
+)
+_IMG_TAG_RE = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
 
 
 def _verify_candidate_image(query_h, url: str) -> float | None:
@@ -111,6 +122,58 @@ def _verify_candidate_image(query_h, url: str) -> float | None:
         return None
 
 
+def _extract_page_image_urls(page_url: str) -> list[str]:
+    """페이지 HTML을 직접 방문해 og:image와 본문 <img> 이미지 URL들을 추출한다."""
+    resp = requests.get(page_url, headers=FETCH_HEADERS, timeout=PAGE_TIMEOUT, stream=True)
+    resp.raise_for_status()
+    if "text/html" not in resp.headers.get("content-type", ""):
+        return []
+    html = resp.raw.read(PAGE_MAX_BYTES, decode_content=True).decode(
+        resp.encoding or "utf-8", errors="ignore"
+    )
+    raw_urls = []
+    for a, b in _OG_IMAGE_RE.findall(html):
+        raw_urls.append(a or b)
+    raw_urls.extend(_IMG_TAG_RE.findall(html))
+
+    out, seen = [], set()
+    for u in raw_urls:
+        full = urljoin(page_url, u.strip())
+        if full.startswith(("http://", "https://")) and full not in seen:
+            seen.add(full)
+            out.append(full)
+        if len(out) >= PAGE_MAX_IMAGES:
+            break
+    return out
+
+
+def _verify_candidate(query_h, cand: dict) -> tuple[float | None, str | None]:
+    """후보를 실측 검증한다. 1) 후보 이미지 직접 대조 → 2) 실패 시 게시 페이지를
+    직접 방문해서 페이지 안의 이미지들(og:image, 본문 img)을 하나씩 대조.
+    반환: (실측 유사도 or None, 검증 방식 'image'/'page'/None)"""
+    if cand.get("image_url"):
+        sim = _verify_candidate_image(query_h, cand["image_url"])
+        if sim is not None:
+            return sim, "image"
+
+    if cand.get("source_url"):
+        try:
+            page_image_urls = _extract_page_image_urls(cand["source_url"])
+        except Exception:
+            return None, None
+        best = None
+        for img_url in page_image_urls:
+            sim = _verify_candidate_image(query_h, img_url)
+            if sim is not None and (best is None or sim > best):
+                best = sim
+                if sim >= 90:  # 확실한 매치면 더 볼 필요 없음
+                    break
+        if best is not None:
+            return best, "page"
+
+    return None, None
+
+
 def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
     """2단계 검색 파이프라인:
     1) Google Vision Web Detection으로 인터넷 전체에서 후보 페이지/이미지를 수집 (재현율 확보)
@@ -128,7 +191,7 @@ def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
             json={
                 "requests": [{
                     "image": {"content": base64.b64encode(content).decode()},
-                    "features": [{"type": "WEB_DETECTION", "maxResults": 30}],
+                    "features": [{"type": "WEB_DETECTION", "maxResults": 100}],
                 }]
             },
             timeout=15,
@@ -139,61 +202,68 @@ def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
         logger.warning("Vision API 호출 실패, 데모 매칭으로 폴백: %s", e)
         return None
 
-    # 1단계: 후보 수집. Vision이 그 페이지에서 실제로 매칭 이미지를 찾아준 경우만
-    # 후보로 삼는다 - 이미지 근거 없이 "관련 있어 보이는 페이지"만 있는 건
-    # 신뢰도가 너무 낮아서(제목만 비슷한 무관한 페이지가 섞임) 아예 제외한다.
+    # 1단계: Vision이 주는 모든 단서를 빠짐없이 후보로 수집한다.
+    # - 매칭 이미지가 있는 페이지 (full/partial)
+    # - 이미지 근거가 없는 페이지도 포함: 뒤에서 페이지를 직접 방문해 검증한다
+    # - 페이지를 특정 못한 최상위 동일/부분일치 이미지
+    # - 시각적으로 유사한 이미지 전부 (개수 제한 없음)
     candidates = []
     seen_urls = set()
+
+    def _add(key, title, image_url, source_url, tier):
+        if not key or key in seen_urls:
+            return
+        seen_urls.add(key)
+        candidates.append({
+            "key": key, "title": title, "image_url": image_url,
+            "source_url": source_url, "tier": tier,
+        })
+
     for page in web.get("pagesWithMatchingImages", []):
         page_url = page.get("url")
-        if not page_url or page_url in seen_urls:
-            continue
         page_full = page.get("fullMatchingImages", [])
         page_partial = page.get("partialMatchingImages", [])
-        if not page_full and not page_partial:
-            continue  # 이미지 근거 없는 페이지는 노이즈이므로 제외
-        seen_urls.add(page_url)
-        thumb = (page_full or page_partial)[0].get("url")
-        candidates.append({
-            "key": page_url,
-            "title": page.get("pageTitle") or page_url,
-            "image_url": thumb,
-            "source_url": page_url,
-            "tier": "full" if page_full else "partial",
-        })
-    for img in web.get("visuallySimilarImages", [])[:20]:
-        img_url = img.get("url")
-        if not img_url or img_url in seen_urls:
-            continue
-        seen_urls.add(img_url)
-        candidates.append({
-            "key": img_url,
-            "title": "게시 페이지 미확인",
-            "image_url": img_url,
-            "source_url": None,
-            "tier": "similar",
-        })
+        thumb = (page_full or page_partial or [{}])[0].get("url")
+        tier = "full" if page_full else ("partial" if page_partial else "page")
+        _add(page_url, page.get("pageTitle") or page_url, thumb, page_url, tier)
 
-    # 2단계: 후보 이미지를 병렬로 내려받아 실측 유사도 검증
+    for img in web.get("fullMatchingImages", []):
+        _add(img.get("url"), "게시 페이지 미확인 (동일 이미지)", img.get("url"), None, "full_image")
+    for img in web.get("partialMatchingImages", []):
+        _add(img.get("url"), "게시 페이지 미확인 (부분 일치)", img.get("url"), None, "partial_image")
+    for img in web.get("visuallySimilarImages", []):
+        _add(img.get("url"), "게시 페이지 미확인", img.get("url"), None, "similar")
+
+    # 2단계: 전 후보를 병렬 실측 검증. 이미지 직접 대조가 막히면 게시 페이지를
+    # 직접 방문(딥 검증)해서 페이지 안 이미지들과 대조한다.
     query_h = query_hashes(query_img)
     with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as pool:
-        verified = list(pool.map(
-            lambda c: _verify_candidate_image(query_h, c["image_url"]), candidates
-        ))
+        verified = list(pool.map(lambda c: _verify_candidate(query_h, c), candidates))
 
-    # 검증 불가(이미지 다운로드 차단 등) 시 Vision 등급 기반 보수적 점수로 폴백
-    TIER_FALLBACK = {"full": 85.0, "partial": 60.0, "similar": 0.0}
+    # 검증 불가(이미지/페이지 모두 차단) 시 Vision 등급 기반 보수적 점수로 폴백.
+    # 근거 없는 page/similar는 검증 실패 시 0점 - 노이즈를 결과에 올리지 않는다.
+    TIER_FALLBACK = {
+        "full": 85.0, "partial": 60.0, "page": 0.0,
+        "full_image": 80.0, "partial_image": 55.0, "similar": 0.0,
+    }
     TIER_NOTE = {
         "full": "웹에서 동일 이미지가 게시된 페이지",
         "partial": "웹에서 변형(크롭 등)된 이미지가 게시된 페이지",
+        "page": "웹에서 관련 이미지가 게시된 페이지",
+        "full_image": "동일 이미지 발견 (게시 페이지 미확인)",
+        "partial_image": "부분 일치 이미지 발견 (게시 페이지 미확인)",
         "similar": "게시 페이지를 특정하지 못한 유사 이미지",
+    }
+    VERIFY_NOTE = {
+        "image": "원본 대비 실측 유사도",
+        "page": "페이지 직접 방문 검증 · 원본 대비 실측 유사도",
     }
 
     matches = []
-    for cand, measured in zip(candidates, verified):
+    for cand, (measured, via) in zip(candidates, verified):
         if measured is not None:
             similarity = measured
-            note = f"{TIER_NOTE[cand['tier']]} · 원본 대비 실측 유사도 {measured}%"
+            note = f"{TIER_NOTE[cand['tier']]} · {VERIFY_NOTE[via]} {measured}%"
         else:
             similarity = TIER_FALLBACK[cand["tier"]]
             note = f"{TIER_NOTE[cand['tier']]} · 이미지 직접 검증 불가(사이트 차단)"
