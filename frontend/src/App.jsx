@@ -1,7 +1,9 @@
 import { useCallback, useRef, useState } from 'react'
 import './App.css'
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
+// 기본값은 same-origin('') — Cloud Run/k8s/compose는 nginx가 같은 주소로 /api를 프록시한다.
+// 로컬 vite dev(:5173)는 backend(:8000)가 다른 포트라 .env.local의 VITE_API_BASE로 덮어쓴다.
+const API_BASE = import.meta.env.VITE_API_BASE ?? ''
 
 const STEPS = ['상품 등록', '스캔 결과', '신고서 초안']
 
