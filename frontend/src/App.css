@@ -371,6 +371,19 @@ button:disabled {
   font-weight: 600;
 }
 
+.info-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent-bg, rgba(67, 56, 202, 0.08));
+  color: var(--accent-ink, #4338ca);
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
 .match-list {
   list-style: none;
   padding: 0;
