@@ -1,0 +1,5 @@
+# 로컬 오픈소스 LLM(신고서 문장 다듬기)용 의존성. Cloud Run 이미지에서만 설치한다.
+# 로컬 개발/쿠버네티스에서는 설치하지 않아도 되며, 없으면 llm.py가 템플릿 폴백으로 동작한다.
+# abetlen 프리빌트 CPU 휠(linux_x86_64 태그)은 musl 링크라 Debian(glibc) 이미지에서 libllama.so
+# 로드에 실패한다 → Dockerfile에서 build-essential+cmake로 glibc 소스 컴파일해 설치한다.
+llama-cpp-python==0.3.2

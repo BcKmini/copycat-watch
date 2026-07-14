@@ -6,12 +6,10 @@ import os
 import re
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date
 from urllib.parse import urljoin, urlparse
 
 import imagehash
 import requests
-from anthropic import Anthropic
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +17,7 @@ from fastapi.responses import FileResponse
 from PIL import Image
 from pydantic import BaseModel
 
+from llm import refine_document
 from matching import SIMILARITY_THRESHOLD, candidate_hashes, query_hashes, similarity_from_hashes
 
 load_dotenv()
@@ -456,107 +455,49 @@ PLATFORM_SUBMISSION_GUIDE = {
     "옥션": "옥션 고객센터 지식재산권 침해 신고 페이지로 접수.",
 }
 
-REPORT_SYSTEM_PROMPT = """너는 소상공인의 지식재산권 침해 신고를 돕는 어시스턴트야. 실제 한국에서
-쓰이는 문서 형식과 저작권법을 근거로 아래 세 문서를 한국어로 작성해.
-
-1. [플랫폼 신고 사유서]
-   - 실제 플랫폼 신고 접수 시 요구되는 항목을 순서대로 포함: (a) 신고인의 권리 보유 사실
-     (본인이 해당 상품 이미지의 원 저작권자/판매자임) (b) 침해 사실 특정(어느 게시물의 어떤
-     이미지가 유사도 몇 %로 동일/유사한지) (c) 첨부 예정 증빙자료 안내(원본 이미지, 최초
-     판매 게시 스크린샷, 침해 게시물 캡처) (d) 요청 조치(게시물 삭제/판매중지)
-   - 함께 주어지는 "신고 접수처 안내" 정보가 있다면 그 내용을 사유서 말미에 그대로 안내해.
-
-2. [내용증명 초안] - 실제 내용증명 관행에 맞춘 4단계 구조로 작성해:
-   ① 발신인이 해당 저작물의 저작권자/독점 판매자임을 명시
-   ② 수신인이 발신인의 이용 허락 없이 해당 저작물(상품 이미지)을 무단 사용해 저작권을
-      침해하고 있다는 사실관계를 육하원칙(누가/언제/어디서/무엇을/어떻게/왜)에 따라 서술
-   ③ 본 내용증명 수신일로부터 10일 이내에 해당 게시물 삭제 및 판매 중지, 손해배상금 지급을
-      요구 (제시된 예상 피해액이 있다면 숫자와 한글을 함께 표기, 예: 123,000원(금 십이만삼천원))
-   ④ 위 기한 내 미이행 시 저작권법 위반에 따른 민형사상 법적 조치(고소, 손해배상 소송 등)를
-      진행할 수 있음을 통지
-   - 발신인/수신인 성명·주소 자리는 [ ]로 표시, 정중하지만 단호한 어조로 작성.
-   - 문서 말미에 "본 내용증명은 우체국 내용증명 우편으로 발송해 발신 사실과 도달을 증명하는
-     것을 권장합니다 (총 3부 작성: 발신인 보관용/수신인 발송용/우체국 보관용)"라고 안내해.
-
-3. [손해배상 청구 내역서]
-   - 저작권법 제125조(손해배상의 청구)를 근거로 명시: "저작재산권자가 고의 또는 과실로 권리를
-     침해한 자에 대하여 손해배상을 청구하는 경우, 침해자가 그 침해행위로 얻은 이익액을
-     저작재산권자가 받은 손해액으로 추정한다"는 취지를 인용해.
-   - 예상 피해액이 주어졌다면 금액(숫자+한글 병기)과 산정 근거(판매가 x 예상 판매량)를 명시.
-   - 예상 피해액이 없다면 "정확한 피해 산정을 위해 상대방의 실제 판매 이력·매출 자료 확인이
-     필요하며, 이는 플랫폼에 정보 제공을 요청하거나 소송상 문서제출명령으로 확보할 수 있다"는
-     취지로 작성해.
-
-각 문서는 "---문서1---", "---문서2---", "---문서3---" 구분자로 나눠서 출력해. 서론 없이 바로 문서 내용만 출력해."""
-
-
 @app.post("/api/report")
 def generate_report(req: ReportRequest):
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
     platform = req.platform or _detect_platform(req.match_shop, req.source_url)
     submission_guide = PLATFORM_SUBMISSION_GUIDE.get(platform)
-    damage_line = f"예상 피해액: {_format_amount(req.estimated_damage)} (판매가 x 월 예상판매량 {ASSUMED_MONTHLY_SALES}개 가정)\n" if req.estimated_damage else ""
-    source_line = f"발견된 게시물 URL: {req.source_url}\n" if req.source_url else ""
-    guide_line = f"신고 접수처 안내: {submission_guide}\n" if submission_guide else ""
-    user_prompt = (
-        f"상품명: {req.product_name}\n"
-        f"신고인(원 판매자): {req.seller_name}\n"
-        f"신고 대상 플랫폼: {platform}\n"
-        f"도용 발견 판매처: {req.match_shop}\n"
-        f"정황: {req.match_note}\n"
-        f"이미지 유사도: {req.similarity}%\n"
-        f"{source_line}"
-        f"{guide_line}"
-        f"{damage_line}"
-        f"오늘 날짜: {date.today().isoformat()}"
+
+    # 법적 사실은 코드가 소유하는 템플릿이 전부 만든다(법 조항·금액·기한 등).
+    damage_doc = (
+        f"예상 피해액: {_format_amount(req.estimated_damage)}\n산정 근거: 판매가 x 월 예상판매량 {ASSUMED_MONTHLY_SALES}개(데모 가정치)\n"
+        f"법적 근거: 저작권법 제125조 - 침해자가 침해행위로 얻은 이익액을 저작재산권자의 손해액으로 추정"
+        if req.estimated_damage
+        else "정확한 피해액 산정을 위해서는 상대방의 실제 판매 이력·매출 자료 확인이 필요합니다. "
+             "플랫폼에 정보 제공을 요청하거나(저작권법 제125조 손해액 추정 규정 근거), "
+             "소송상 문서제출명령으로 확보할 수 있습니다."
+    )
+    guide_doc = f"\n\n[신고 접수처] {submission_guide}" if submission_guide else ""
+    template = (
+        "---문서1---\n"
+        f"[{platform} 신고 사유서]\n"
+        f"본인은 '{req.product_name}' 상품 이미지의 원 판매자 겸 저작권자입니다. "
+        f"'{req.match_shop}'에서 본인의 상품 이미지가 무단으로 사용되고 있음을 확인했습니다({req.match_note}). "
+        f"이미지 유사도 분석 결과 {req.similarity}% 일치하여 명백한 도용으로 판단됩니다. "
+        "원본 이미지, 최초 판매 게시 스크린샷, 침해 게시물 캡처를 증빙자료로 첨부하며, "
+        f"해당 게시물의 판매 중지 및 이미지 삭제 조치를 요청합니다.{guide_doc}\n\n"
+        "---문서2---\n"
+        "[내용증명 초안]\n"
+        "발신인: [본인 성명/상호/주소]\n수신인: [상대방 상호/성명/주소]\n\n"
+        f"1. 발신인은 '{req.product_name}' 상품 이미지의 저작권자 겸 판매자입니다.\n"
+        f"2. 수신인은 발신인의 이용 허락 없이 위 상품 이미지를 '{req.match_shop}'에서 무단 사용하여 "
+        f"발신인의 저작권을 침해하고 있음을 확인하였습니다({req.match_note}, 이미지 유사도 {req.similarity}%).\n"
+        "3. 본 내용증명을 수신한 날로부터 10일 이내에 해당 게시물의 판매를 중단하고 이미지를 삭제할 것과, "
+        f"{('금 ' + _format_amount(req.estimated_damage) if req.estimated_damage else '피해액')}"
+        "의 배상을 요청합니다.\n"
+        "4. 위 기한 내 이행되지 않을 경우, 저작권법 위반에 따른 민형사상 법적 조치(고소 및 손해배상 청구 소송)를 "
+        "진행할 수 있음을 알려드립니다.\n\n"
+        "본 내용증명은 우체국 내용증명 우편으로 발송해 발신 사실과 도달을 증명하는 것을 권장합니다 "
+        "(총 3부 작성: 발신인 보관용 / 수신인 발송용 / 우체국 보관용).\n\n"
+        "---문서3---\n"
+        f"[손해배상 청구 내역서]\n{damage_doc}"
     )
 
-    if not api_key:
-        damage_doc = (
-            f"예상 피해액: {_format_amount(req.estimated_damage)}\n산정 근거: 판매가 x 월 예상판매량 {ASSUMED_MONTHLY_SALES}개(데모 가정치)\n"
-            f"법적 근거: 저작권법 제125조 - 침해자가 침해행위로 얻은 이익액을 저작재산권자의 손해액으로 추정"
-            if req.estimated_damage
-            else "정확한 피해액 산정을 위해서는 상대방의 실제 판매 이력·매출 자료 확인이 필요합니다. "
-                 "플랫폼에 정보 제공을 요청하거나(저작권법 제125조 손해액 추정 규정 근거), "
-                 "소송상 문서제출명령으로 확보할 수 있습니다."
-        )
-        guide_doc = f"\n\n[신고 접수처] {submission_guide}" if submission_guide else ""
-        return {
-            "report": (
-                "---문서1---\n"
-                f"[{platform} 신고 사유서 - 임시 템플릿]\n"
-                f"본인은 '{req.product_name}' 상품 이미지의 원 판매자 겸 저작권자입니다. "
-                f"'{req.match_shop}'에서 본인의 상품 이미지가 무단으로 사용되고 있음을 확인했습니다({req.match_note}). "
-                f"이미지 유사도 분석 결과 {req.similarity}% 일치하여 명백한 도용으로 판단됩니다. "
-                "원본 이미지, 최초 판매 게시 스크린샷, 침해 게시물 캡처를 증빙자료로 첨부하며, "
-                f"해당 게시물의 판매 중지 및 이미지 삭제 조치를 요청합니다.{guide_doc}\n\n"
-                "---문서2---\n"
-                "[내용증명 초안 - 임시 템플릿]\n"
-                "발신인: [본인 성명/상호/주소]\n수신인: [상대방 상호/성명/주소]\n\n"
-                f"1. 발신인은 '{req.product_name}' 상품 이미지의 저작권자 겸 판매자입니다.\n"
-                f"2. 수신인은 발신인의 이용 허락 없이 위 상품 이미지를 '{req.match_shop}'에서 무단 사용하여 "
-                f"발신인의 저작권을 침해하고 있음을 확인하였습니다({req.match_note}, 이미지 유사도 {req.similarity}%).\n"
-                "3. 본 내용증명을 수신한 날로부터 10일 이내에 해당 게시물의 판매를 중단하고 이미지를 삭제할 것과, "
-                f"{('금 ' + _format_amount(req.estimated_damage) if req.estimated_damage else '피해액')}"
-                "의 배상을 요청합니다.\n"
-                "4. 위 기한 내 이행되지 않을 경우, 저작권법 위반에 따른 민형사상 법적 조치(고소 및 손해배상 청구 소송)를 "
-                "진행할 수 있음을 알려드립니다.\n\n"
-                "본 내용증명은 우체국 내용증명 우편으로 발송해 발신 사실과 도달을 증명하는 것을 권장합니다 "
-                "(총 3부 작성: 발신인 보관용 / 수신인 발송용 / 우체국 보관용).\n\n"
-                "---문서3---\n"
-                f"[손해배상 청구 내역서 - 임시 템플릿]\n{damage_doc}"
-            ),
-            "ai_generated": False,
-        }
-
-    client = Anthropic(api_key=api_key)
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1536,
-        system=REPORT_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_prompt}],
-    )
-    return {"report": resp.content[0].text, "ai_generated": True}
+    # 로컬 LLM은 문장만 다듬는다. 검증 실패/모델 부재 시 템플릿 원문 그대로.
+    report, ai_generated = refine_document(template, max_tokens=1400)
+    return {"report": report, "ai_generated": ai_generated}
 
 
 class BatchMatchItem(BaseModel):
@@ -573,84 +514,37 @@ class BatchReportRequest(BaseModel):
     matches: list[BatchMatchItem]
 
 
-BATCH_SYSTEM_PROMPT = """너는 소상공인의 지식재산권 침해 신고를 돕는 어시스턴트야.
-한 상품에 대해 여러 곳에서 발견된 도용 사례를 하나로 묶어, 실제 한국 내용증명 관행에
-맞춘 아래 두 문서를 한국어로 작성해.
-
-1. [통합 신고 사유서] - 발견된 모든 도용 사례를 목록으로 정리하고(각 판매처별 플랫폼·
-   유사도·정황), 여러 곳에서 반복적으로 발견된 조직적 도용임을 강조. 각 건마다 원본
-   이미지·침해 게시물 캡처를 증빙자료로 첨부할 예정임을 명시.
-2. [통합 내용증명 초안] - 아래 4단계 구조로 작성:
-   ① 발신인이 해당 상품 이미지의 저작권자/판매자임을 명시
-   ② 수신인들이 발신인의 이용 허락 없이 무단 사용해 저작권을 침해하고 있다는 사실을
-      각 판매처별로 열거
-   ③ 수신일로부터 10일 이내 전 게시물 삭제·판매중지 및 총 예상 피해액(숫자+한글 병기)의
-      배상을 요구
-   ④ 미이행 시 저작권법 위반에 따른 민형사상 법적 조치(고소, 손해배상 소송)를 예고
-   발신인/수신인 자리는 [ ]로 표시하고, 우체국 내용증명 발송(3부 작성) 권장 문구를 포함해.
-
-각 문서는 "---문서1---", "---문서2---" 구분자로 나눠서 출력해. 서론 없이 바로 문서 내용만 출력해."""
-
-
 @app.post("/api/report/batch")
 def generate_batch_report(req: BatchReportRequest):
     if not req.matches:
         raise HTTPException(400, "선택된 매치가 없습니다")
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
     total_damage = sum(m.estimated_damage or 0 for m in req.matches)
-    match_lines = "\n".join(
-        f"{i + 1}. {m.shop} (플랫폼: {_detect_platform(m.shop, m.source_url)}, "
-        f"유사도 {m.similarity}%, {m.note}"
-        + (f", URL: {m.source_url}" if m.source_url else "")
-        + (f", 예상피해액: {_format_amount(m.estimated_damage)}" if m.estimated_damage else "")
-        + ")"
-        for i, m in enumerate(req.matches)
-    )
-    user_prompt = (
-        f"상품명: {req.product_name}\n"
-        f"신고인(원 판매자): {req.seller_name}\n"
-        f"발견된 도용 건수: {len(req.matches)}건\n"
-        f"총 예상 피해액: {_format_amount(total_damage) if total_damage else '산정 불가(판매 이력 확인 필요)'}\n"
-        f"발견 목록:\n{match_lines}\n"
-        f"오늘 날짜: {date.today().isoformat()}"
+    listing = "\n".join(f"  - {m.shop} (유사도 {m.similarity}%)" for m in req.matches)
+    damage_text = _format_amount(total_damage) if total_damage else "산정 불가(판매 이력 확인 필요)"
+    template = (
+        "---문서1---\n"
+        f"[통합 신고 사유서]\n"
+        f"본인은 '{req.product_name}' 상품 이미지의 원 판매자 겸 저작권자입니다. "
+        f"아래 {len(req.matches)}곳에서 본인의 상품 이미지가 무단으로 사용되고 있음을 확인했습니다:\n{listing}\n\n"
+        f"총 예상 피해액은 {damage_text}으로 산정되며, 각 게시물의 원본 이미지·침해 게시물 캡처를 "
+        "증빙자료로 첨부하여 판매 중지 및 이미지 삭제 조치를 일괄 요청합니다.\n\n"
+        "---문서2---\n"
+        "[통합 내용증명 초안]\n"
+        "발신인: [본인 성명/상호/주소]\n수신인: [각 상호/성명/주소]\n\n"
+        f"1. 발신인은 '{req.product_name}' 상품 이미지의 저작권자 겸 판매자입니다.\n"
+        f"2. 수신인들은 발신인의 이용 허락 없이 위 상품 이미지를 아래와 같이 무단 사용하여 "
+        f"저작권을 침해하고 있음을 확인하였습니다:\n{listing}\n"
+        f"3. 본 내용증명을 수신한 날로부터 10일 이내에 전 게시물의 판매를 중단하고 이미지를 삭제할 것과, "
+        f"금 {damage_text}의 배상을 요청합니다.\n"
+        "4. 위 기한 내 이행되지 않을 경우, 저작권법 위반에 따른 민형사상 법적 조치(고소 및 손해배상 청구 소송)를 "
+        "진행할 수 있음을 알려드립니다.\n\n"
+        "본 내용증명은 우체국 내용증명 우편으로 발송해 발신 사실과 도달을 증명하는 것을 권장합니다 "
+        "(총 3부 작성: 발신인 보관용 / 수신인 발송용 / 우체국 보관용)."
     )
 
-    if not api_key:
-        listing = "\n".join(f"  - {m.shop} (유사도 {m.similarity}%)" for m in req.matches)
-        damage_text = _format_amount(total_damage) if total_damage else "산정 불가(판매 이력 확인 필요)"
-        return {
-            "report": (
-                "---문서1---\n"
-                f"[통합 신고 사유서 - 임시 템플릿]\n"
-                f"본인은 '{req.product_name}' 상품 이미지의 원 판매자 겸 저작권자입니다. "
-                f"아래 {len(req.matches)}곳에서 본인의 상품 이미지가 무단으로 사용되고 있음을 확인했습니다:\n{listing}\n\n"
-                f"총 예상 피해액은 {damage_text}으로 산정되며, 각 게시물의 원본 이미지·침해 게시물 캡처를 "
-                "증빙자료로 첨부하여 판매 중지 및 이미지 삭제 조치를 일괄 요청합니다.\n\n"
-                "---문서2---\n"
-                "[통합 내용증명 초안 - 임시 템플릿]\n"
-                "발신인: [본인 성명/상호/주소]\n수신인: [각 상호/성명/주소]\n\n"
-                f"1. 발신인은 '{req.product_name}' 상품 이미지의 저작권자 겸 판매자입니다.\n"
-                f"2. 수신인들은 발신인의 이용 허락 없이 위 상품 이미지를 아래와 같이 무단 사용하여 "
-                f"저작권을 침해하고 있음을 확인하였습니다:\n{listing}\n"
-                f"3. 본 내용증명을 수신한 날로부터 10일 이내에 전 게시물의 판매를 중단하고 이미지를 삭제할 것과, "
-                f"금 {damage_text}의 배상을 요청합니다.\n"
-                "4. 위 기한 내 이행되지 않을 경우, 저작권법 위반에 따른 민형사상 법적 조치(고소 및 손해배상 청구 소송)를 "
-                "진행할 수 있음을 알려드립니다.\n\n"
-                "본 내용증명은 우체국 내용증명 우편으로 발송해 발신 사실과 도달을 증명하는 것을 권장합니다 "
-                "(총 3부 작성: 발신인 보관용 / 수신인 발송용 / 우체국 보관용)."
-            ),
-            "ai_generated": False,
-        }
-
-    client = Anthropic(api_key=api_key)
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=2048,
-        system=BATCH_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_prompt}],
-    )
-    return {"report": resp.content[0].text, "ai_generated": True}
+    report, ai_generated = refine_document(template, max_tokens=1800)
+    return {"report": report, "ai_generated": ai_generated}
 
 
 # 실제 절차 조사 결과(2026-07 기준):
@@ -672,70 +566,29 @@ class LegalGuideRequest(BaseModel):
     repeated_infringement: bool = False
 
 
-LEGAL_GUIDE_SYSTEM_PROMPT = """너는 소상공인에게 저작권 침해 대응 절차를 안내하는
-어시스턴트야. 아래 실제 한국 법 절차를 근거로, 지금 상황에 맞는 "법적 대응 가이드"를
-한국어로 작성해 (문서가 아니라 행동 순서를 안내하는 가이드 형식).
-
-포함할 내용:
-1. 우선순위 대응 순서: 통상 (a) 플랫폼 신고로 게시물 우선 차단 (b) 내용증명 발송으로
-   공식 경고 및 소멸시효 중단 (c) 그래도 미해결 시 민형사 절차, 순서로 진행하는 게
-   일반적임을 안내.
-2. 민사/형사 대응 가능성: 저작권법 제125조(손해배상 청구 시 침해자 이익액을 손해액으로
-   추정) 및 저작권법상 형사 고소(친고죄 여부는 사안에 따라 다름) 가능성을 안내.
-3. 소송 형태 판단: 예상 피해액이 3,000만원 이하면 소액사건심판법 제2조에 따른
-   소액사건심판(신속 처리, 1회 변론기일 원칙)을 활용할 수 있고, 초과하면 일반 민사
-   소송 절차가 필요함을 안내. 반복적 도용이 확인된 경우 손해액이 커질 수 있어 정식
-   소송도 검토할 수 있음을 언급.
-4. 무료 법률 지원 연결처를 안내: 한국저작권위원회 저작권 상담센터(무료 법률 컨설팅),
-   대한법률구조공단(국번없이 132, 무료 법률상담).
-5. 유의사항: 본 가이드는 일반적인 절차 안내이며 구체적 법률 자문이 아니므로, 실제 진행
-   전 위 상담처를 통해 전문가 확인을 권장한다는 점을 명시.
-
-서론 없이 바로 가이드 본문만 출력해. 번호 매긴 섹션으로 구성해."""
-
-
 @app.post("/api/legal-guide")
 def generate_legal_guide(req: LegalGuideRequest):
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
     is_small_claim = req.total_damage <= 30_000_000
-    user_prompt = (
-        f"상품명: {req.product_name}\n"
-        f"발견된 도용 의심 건수: {req.total_matches}건 (이 중 실측 검증 {req.verified_matches}건)\n"
-        f"예상 피해액 합계: {_format_amount(req.total_damage) if req.total_damage else '산정 불가'}\n"
-        f"반복적/조직적 도용 여부: {'예' if req.repeated_infringement else '아니오'}\n"
-        f"소액사건심판(소가 3,000만원 이하) 해당 여부: {'해당' if is_small_claim else '해당하지 않음(일반 민사소송 검토 필요)'}\n"
+    claim_line = (
+        f"예상 피해액이 {_format_amount(req.total_damage)}으로 소가 3,000만원 이하 기준에 해당해, "
+        "소액사건심판법 제2조에 따른 소액사건심판(1회 변론기일 원칙의 신속 절차)을 활용할 수 있습니다."
+        if req.total_damage and is_small_claim
+        else "예상 피해액이 3,000만원을 초과하거나 산정되지 않아, 일반 민사소송 절차 검토가 필요합니다."
+    )
+    template = (
+        "1. 우선순위 대응 순서\n"
+        "게시물 삭제가 급하다면 플랫폼 신고를 먼저 진행하고, 공식적인 경고와 증거 확보를 위해 "
+        "내용증명을 함께 발송하는 것이 일반적입니다. 이후에도 해결되지 않으면 민형사 절차를 검토합니다.\n\n"
+        "2. 민사/형사 대응 가능성\n"
+        "저작권법 제125조에 따라 침해자가 그 침해행위로 얻은 이익액을 저작재산권자의 손해액으로 "
+        "추정하여 손해배상을 청구할 수 있습니다. 사안에 따라 저작권법 위반으로 형사 고소도 가능합니다.\n\n"
+        f"3. 소송 형태 판단\n{claim_line}\n"
+        f"{'반복적/조직적 도용 정황이 확인되어 손해액이 커질 수 있으므로 정식 소송도 함께 검토해볼 만합니다.' if req.repeated_infringement else ''}\n\n"
+        f"4. 무료 법률 지원 연결처\n{LEGAL_RESOURCES}\n\n"
+        "5. 유의사항\n"
+        "본 가이드는 일반적인 절차 안내이며 구체적인 법률 자문이 아닙니다. "
+        "실제 진행 전 위 상담처를 통해 전문가 확인을 받으시길 권장합니다."
     )
 
-    if not api_key:
-        claim_line = (
-            f"예상 피해액이 {_format_amount(req.total_damage)}으로 소가 3,000만원 이하 기준에 해당해, "
-            "소액사건심판법 제2조에 따른 소액사건심판(1회 변론기일 원칙의 신속 절차)을 활용할 수 있습니다."
-            if req.total_damage and is_small_claim
-            else "예상 피해액이 3,000만원을 초과하거나 산정되지 않아, 일반 민사소송 절차 검토가 필요합니다."
-        )
-        return {
-            "report": (
-                "1. 우선순위 대응 순서\n"
-                "게시물 삭제가 급하다면 플랫폼 신고를 먼저 진행하고, 공식적인 경고와 증거 확보를 위해 "
-                "내용증명을 함께 발송하는 것이 일반적입니다. 이후에도 해결되지 않으면 민형사 절차를 검토합니다.\n\n"
-                "2. 민사/형사 대응 가능성\n"
-                "저작권법 제125조에 따라 침해자가 그 침해행위로 얻은 이익액을 저작재산권자의 손해액으로 "
-                "추정하여 손해배상을 청구할 수 있습니다. 사안에 따라 저작권법 위반으로 형사 고소도 가능합니다.\n\n"
-                f"3. 소송 형태 판단\n{claim_line}\n"
-                f"{'반복적/조직적 도용 정황이 확인되어 손해액이 커질 수 있으므로 정식 소송도 함께 검토해볼 만합니다.' if req.repeated_infringement else ''}\n\n"
-                f"4. 무료 법률 지원 연결처\n{LEGAL_RESOURCES}\n\n"
-                "5. 유의사항\n"
-                "본 가이드는 일반적인 절차 안내이며 구체적인 법률 자문이 아닙니다. "
-                "실제 진행 전 위 상담처를 통해 전문가 확인을 받으시길 권장합니다."
-            ),
-            "ai_generated": False,
-        }
-
-    client = Anthropic(api_key=api_key)
-    resp = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1536,
-        system=LEGAL_GUIDE_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_prompt}],
-    )
-    return {"report": resp.content[0].text, "ai_generated": True}
+    report, ai_generated = refine_document(template, max_tokens=1400)
+    return {"report": report, "ai_generated": ai_generated}
