@@ -182,7 +182,11 @@ def _verify_candidate_image(query: "Query", url: str) -> tuple[float | None, flo
     if not url or not url.startswith(("http://", "https://")):
         return None, None
     try:
-        resp = requests.get(url, headers=FETCH_HEADERS, timeout=VERIFY_TIMEOUT, stream=True)
+        # 많은 이미지 호스트가 Referer가 없으면 핫링크로 보고 차단한다. 이미지 자신의 출처
+        # 도메인을 Referer로 실어 보내면 실제로 내려받아 검증되는 후보가 늘어난다("미확인" 감소).
+        p = urlparse(url)
+        headers = {**FETCH_HEADERS, "Referer": f"{p.scheme}://{p.netloc}/"}
+        resp = requests.get(url, headers=headers, timeout=VERIFY_TIMEOUT, stream=True)
         resp.raise_for_status()
         data = resp.raw.read(VERIFY_MAX_BYTES + 1, decode_content=True)
         if len(data) > VERIFY_MAX_BYTES:
@@ -345,11 +349,15 @@ def _scan_web(content: bytes, query: "Query") -> dict | None:
     with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as pool:
         verified = list(pool.map(lambda c: _verify_candidate(query, c), candidates))
 
-    # 검증 불가(이미지/페이지 모두 차단) 시 Vision 등급 기반 보수적 점수로 폴백.
-    # 근거 없는 page/similar는 검증 실패 시 0점 - 노이즈를 결과에 올리지 않는다.
+    # 폴백 점수 원칙:
+    # - 게시 페이지가 있는 후보(full/partial)는 검증이 막혀도 사용자가 그 페이지를 직접 열어
+    #   확인할 수 있으므로 보수적 점수로 남긴다.
+    # - "게시 페이지 미확인"(full_image/partial_image/similar, source_url 없음)은 페이지도 없고
+    #   서버 이미지 검증도 실패했다면 확인·조치가 불가능한 근거 없는 후보다. 등급만 믿고 높은
+    #   점수(옛 80/55)로 올리지 않고 0점 처리해, 실제 해시/CLIP 검증에 성공한 것만 결과에 넣는다.
     TIER_FALLBACK = {
         "full": 85.0, "partial": 60.0, "page": 0.0,
-        "full_image": 80.0, "partial_image": 55.0, "similar": 0.0,
+        "full_image": 0.0, "partial_image": 0.0, "similar": 0.0,
     }
     TIER_NOTE = {
         "full": "웹에서 동일 이미지가 게시된 페이지",
