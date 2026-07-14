@@ -4,6 +4,9 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # 상품 사진(>1MB)·다중 이미지 업로드가 nginx 기본 1MB 상한에 막히지 않도록 한다.
+    client_max_body_size 60M;
+
     location /api/ {
         proxy_pass http://${BACKEND_HOST}:${BACKEND_PORT}/api/;
         proxy_set_header Host $host;
