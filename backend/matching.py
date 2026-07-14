@@ -9,7 +9,10 @@ phash(perceptual hash)만 쓰면 색상을 전혀 보지 않고 명암 구조만
 import imagehash
 from PIL import Image
 
-SIMILARITY_THRESHOLD = 30  # 실험(experiments/run_experiment.py, 104개 규모)으로 재튜닝한 값
+SIMILARITY_THRESHOLD = 30  # 실험으로 튜닝(experiments/run_experiment.py). 현실적 도용
+# 변형본 실험에서 F1 최적은 35였지만, 도용 탐지 도구는 "놓친 사본(FN)"이 "무시하면 되는
+# 오탐(FP)"보다 손해가 크고 서버가 2단계로 재검증하므로, recall이 더 높은 30을 채택했다
+# (threshold=30: recall 0.976 / precision 0.941, threshold=35: recall 0.967 / precision 0.961).
 COLOR_PENALTY_PER_UNIT = 12.0  # colorhash 거리 1당 유사도 감점
 MAX_COLOR_PENALTY = 75.0  # 색상 차이만으로 깎을 수 있는 최대치 (구조 일치는 여전히 반영)
 

@@ -1,12 +1,17 @@
 """정확도 실험: 실제 프로덕션 매칭 알고리즘(backend/matching.py)을 CC 라이선스
 실사 데이터셋(experiments/dataset)에 대해 돌려서 정확도를 측정한다.
 
+주제("소상공인이 자기 상품 사진을 올리면 도용본을 찾는다")에 맞게, 도용본은
+현실에서 실제로 나타나는 변형을 모사한다. 단순 크롭/반전이 아니라 스크린샷
+재업로드, 판매자 워터마크 삽입, 저품질 재압축, 목록 썸네일 재사용, 색보정 편집
+5가지를 상품마다 생성한다.
+
 절차:
-1. 각 원본 이미지에서 도용 변형본 2장(크롭+밝기조정 / 좌우반전+워터마크)을 생성
+1. 각 원본(=판매자 본인 상품 사진)에서 위 5종의 현실적 도용 변형본을 생성
 2. 모든 (쿼리=원본, 후보=변형본 전체) 쌍에 대해 유사도를 계산
    - 같은 상품의 변형본이면 True Positive 후보, 다른 상품의 변형본이면 False Positive 후보
 3. 임계값을 0~100까지 훑으며 precision/recall/F1을 계산해 최적 임계값을 찾고,
-   현재 프로덕션 임계값(SIMILARITY_THRESHOLD=35)과 비교한다
+   현재 프로덕션 임계값(SIMILARITY_THRESHOLD)과 비교한다
 4. 결과를 터미널에 표로 출력하고, results/ 아래에 CSV·PNG로 저장한다
 """
 import json
@@ -18,7 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageEnhance
 
 from matching import SIMILARITY_THRESHOLD, candidate_hashes, query_hashes, similarity_from_hashes
 
@@ -31,22 +36,43 @@ os.makedirs(RESULTS_DIR, exist_ok=True)
 
 
 def make_variants(pid, orig_path):
-    orig = Image.open(orig_path).convert("RGB")
+    """실제 이미지 도용에서 흔한 5가지 변형을 모사해 도용본을 만든다."""
+    orig = Image.open(orig_path).convert("RGB").resize((400, 400))
     outputs = {}
 
-    cropped = orig.resize((400, 400)).crop((10, 10, 390, 390)).resize((400, 400))
-    enhanced = Image.eval(cropped, lambda x: min(255, int(x * 1.08)))
-    path_a = os.path.join(VARIANT_DIR, f"{pid}_shopA.jpg")
-    enhanced.save(path_a)
-    outputs["shopA"] = path_a
+    # 1) 스크린샷 후 재업로드: 가장자리가 살짝 잘리고 축소 + JPEG 재압축
+    shot = orig.crop((10, 10, 390, 390)).resize((340, 340))
+    p = os.path.join(VARIANT_DIR, f"{pid}_screenshot.jpg")
+    shot.save(p, format="JPEG", quality=65)
+    outputs["screenshot"] = p
 
-    flipped = orig.resize((400, 400)).transpose(Image.FLIP_LEFT_RIGHT)
-    draw = ImageDraw.Draw(flipped)
-    draw.rectangle([310, 360, 400, 400], fill=(0, 0, 0))
-    draw.text((316, 372), "SALE", fill=(255, 255, 255))
-    path_b = os.path.join(VARIANT_DIR, f"{pid}_shopB.jpg")
-    flipped.save(path_b)
-    outputs["shopB"] = path_b
+    # 2) 판매자가 자기 상호 워터마크를 하단에 삽입
+    wm = orig.copy()
+    draw = ImageDraw.Draw(wm)
+    draw.rectangle([0, 366, 400, 400], fill=(0, 0, 0))
+    draw.text((10, 376), "BEST DEAL SHOP", fill=(255, 255, 255))
+    p = os.path.join(VARIANT_DIR, f"{pid}_watermark.jpg")
+    wm.save(p, format="JPEG", quality=80)
+    outputs["watermark"] = p
+
+    # 3) 저품질로 반복 재압축된 사본(밝기도 살짝 조정)
+    p = os.path.join(VARIANT_DIR, f"{pid}_recompress.jpg")
+    ImageEnhance.Brightness(orig).enhance(1.05).save(p, format="JPEG", quality=40)
+    outputs["recompress"] = p
+
+    # 4) 목록 썸네일을 그대로 긁어 재사용(축소본을 다시 확대해 디테일 손실)
+    th = orig.resize((220, 220)).resize((400, 400))
+    p = os.path.join(VARIANT_DIR, f"{pid}_thumbnail.jpg")
+    th.save(p, format="JPEG", quality=70)
+    outputs["thumbnail"] = p
+
+    # 5) '다르게 보이려' 좌우반전 + 채도/밝기 보정
+    flip = orig.transpose(Image.FLIP_LEFT_RIGHT)
+    flip = ImageEnhance.Color(flip).enhance(1.25)
+    flip = ImageEnhance.Brightness(flip).enhance(1.08)
+    p = os.path.join(VARIANT_DIR, f"{pid}_edited.jpg")
+    flip.save(p, format="JPEG", quality=80)
+    outputs["edited"] = p
 
     return outputs
 
@@ -56,6 +82,10 @@ def main():
         manifest = json.load(f)
 
     print(f"데이터셋: {len(manifest)}개 원본 (Openverse CC 라이선스 실사 이미지)\n")
+
+    # 변형 방식이 바뀌면 옛 변형본이 섞이지 않도록 먼저 비운다
+    for old in os.listdir(VARIANT_DIR):
+        os.remove(os.path.join(VARIANT_DIR, old))
 
     products = []
     for entry in manifest:

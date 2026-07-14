@@ -167,7 +167,7 @@ copycat-watch/
 │   └── results/                 #   실험 결과(CSV/JSON/PNG)
 │
 ├── docker-compose.yml           # 로컬 통합 실행
-├── EXPERIMENT.md                # 정확도 실험 전체 기록 (5 iteration)
+├── EXPERIMENT.md                # 정확도 실험 전체 기록 (6 iteration)
 └── README.md                    # 이 문서
 ```
 
@@ -217,10 +217,11 @@ kubectl apply -f k8s/backend.yaml -f k8s/frontend.yaml -f k8s/ingress.yaml
 
 ## 정확도 검증 & 테스트
 
-- **`EXPERIMENT.md`**: CC 라이선스 실사 데이터셋으로 4단계에 걸쳐 진행한 정확도 실험
+- **`EXPERIMENT.md`**: CC 라이선스 실사 데이터셋으로 6단계에 걸쳐 진행한 정확도 실험
   전체 기록. phash 단독 → 색상 무시 버그 발견(pytest로) → colorhash 결합으로 F1
-  0.737→0.962 개선 → 실시간 웹 검색 파이프라인 2단계 검증까지의 과정과 수치를 전부
-  투명하게 공개.
+  0.737→0.962 개선 → 실시간 웹 검색 파이프라인 2단계 검증 → 표본 확대(91/104개) →
+  현실적 도용 변형 5종(스크린샷·워터마크·재압축·썸네일·색보정)으로 재측정(41,405쌍,
+  threshold=30에서 recall 0.976)까지의 과정과 수치를 전부 투명하게 공개.
 - **`backend/tests/`**: pytest 30개 — 정상 케이스뿐 아니라 손상된 파일, 초과 용량,
   경로 탈출 시도, 완전히 다른 색의 단색 이미지 등 히든 엣지케이스를 커버.
 - **`frontend/drive.mjs`**: Playwright로 배포된 앱을 실제 헤드리스 브라우저에서
