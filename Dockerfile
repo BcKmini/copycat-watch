@@ -35,13 +35,13 @@ RUN apt-get update \
 # 오픈소스 신고서 생성 모델(Qwen2.5-1.5B-Instruct Q4_K_M, Apache-2.0)을 이미지에 내장.
 # 신고서 요청 때만 지연 로딩되므로 스캔 경로의 콜드스타트에는 영향이 없다.
 ENV LOCAL_LLM_PATH=/models/model.gguf
-# HF는 익명 curl(기본 User-Agent)·데이터센터 IP의 LFS 다운로드를 403으로 막을 때가 있어
-# 브라우저 User-Agent와 재시도를 명시한다(Cloud Build에서 확인된 403 회피).
+# 모델은 프로젝트 자체 GCS 버킷(공개 읽기)에서 받는다. Hugging Face는 데이터센터 IP의 다운로드를
+# 간헐적으로 403 차단해 Cloud Build를 실패시켰다 → 자체 스토리지에서 받아 빌드를 결정적으로 만든다.
+# (원본: Qwen/Qwen2.5-1.5B-Instruct-GGUF q4_k_m, Apache-2.0)
 RUN mkdir -p /models \
     && curl -fSL --retry 5 --retry-delay 5 --retry-all-errors \
-       -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
        -o /models/model.gguf \
-       "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true"
+       "https://storage.googleapis.com/kt-a-502310-copycat-models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
 
 COPY backend/ .
 
