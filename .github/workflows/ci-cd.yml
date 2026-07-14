@@ -5,6 +5,10 @@ name: CI/CD
 on:
   push:
     branches: [main]
+    # 문서만 바꾼 push는 빌드/배포를 돌리지 않는다(불필요한 배포·비용 방지).
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
   pull_request:
     branches: [main]
 

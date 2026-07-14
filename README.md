@@ -28,6 +28,7 @@
 <br/>
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-copycat--watch-4285F4?style=flat-square&logo=googlecloud&logoColor=white)](https://copycat-watch-655097859028.asia-northeast3.run.app)
+[![CI/CD](https://github.com/BcKmini/copycat-watch/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/BcKmini/copycat-watch/actions/workflows/ci-cd.yml)
 
 **상시 구동 데모 → https://copycat-watch-655097859028.asia-northeast3.run.app**
 
@@ -289,6 +290,10 @@ gcloud run deploy copycat-watch --source . --region asia-northeast3 \
 
 전체 절차(시크릿 등록·IAM·비용)는 [`DEPLOY.md`](DEPLOY.md) 참고.
 현재 배포본 → **https://copycat-watch-655097859028.asia-northeast3.run.app**
+
+> **CI/CD** — `main`에 push하면 [GitHub Actions](.github/workflows/ci-cd.yml)가 백엔드 pytest와
+> 프론트 빌드를 돌리고, 통과하면 위 명령으로 Cloud Run에 자동 배포한다. 인증은 키 파일 없는
+> Workload Identity Federation을 쓴다(이 레포로만 제한). PR에서는 테스트만 돌려 검토한다.
 
 ### 필요한 API 키 (없어도 데모 모드로 정상 동작)
 
