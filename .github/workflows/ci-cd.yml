@@ -1,0 +1,77 @@
+name: CI/CD
+
+# main에 push되면 테스트 → (통과 시) Cloud Run 배포.
+# PR에서는 테스트만 돌려 검토한다(배포 없음).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: 테스트 (backend pytest · frontend build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: 백엔드 의존성 설치
+        working-directory: backend
+        run: pip install -r requirements-dev.txt
+
+      - name: 백엔드 테스트 (pytest)
+        working-directory: backend
+        run: pytest tests/ -q
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 프론트엔드 설치·빌드
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+  deploy:
+    name: Cloud Run 배포
+    needs: test
+    # main push에서만 배포(PR 검토 시에는 스킵)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # WIF 토큰 발급에 필요
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: GCP 인증 (Workload Identity Federation · 키 없음)
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: kt-a-502310
+          workload_identity_provider: projects/655097859028/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: gh-deployer@kt-a-502310.iam.gserviceaccount.com
+
+      - name: gcloud 설정
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Cloud Run 배포 (레포 루트 Dockerfile · Cloud Build)
+        run: |
+          gcloud run deploy copycat-watch \
+            --source . \
+            --region asia-northeast3 \
+            --allow-unauthenticated \
+            --memory 3Gi --cpu 4 --cpu-boost \
+            --timeout 300 --concurrency 1 \
+            --min-instances 0 --max-instances 6 \
+            --set-secrets "GOOGLE_VISION_API_KEY=google-vision-api-key:latest" \
+            --quiet
