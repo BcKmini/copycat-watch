@@ -21,6 +21,7 @@ import sys
 import threading
 
 _lock = threading.Lock()
+_infer_lock = threading.Lock()  # llama.cpp는 스레드 안전하지 않아 추론을 직렬화한다.
 _llm = None
 _load_failed = False
 
@@ -104,14 +105,16 @@ def refine_document(template_text: str, max_tokens: int = 1400) -> tuple[str, bo
     if llm is None:
         return template_text, False
     try:
-        out = llm.create_chat_completion(
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": template_text},
-            ],
-            temperature=0.3,
-            max_tokens=max_tokens,
-        )
+        # 동시 요청이 하나의 Llama 객체로 몰리면 크래시하므로 추론을 직렬화한다.
+        with _infer_lock:
+            out = llm.create_chat_completion(
+                messages=[
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": template_text},
+                ],
+                temperature=0.3,
+                max_tokens=max_tokens,
+            )
         refined = out["choices"][0]["message"]["content"].strip()
     except Exception:
         return template_text, False
