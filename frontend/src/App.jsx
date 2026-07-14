@@ -41,6 +41,7 @@ function escapeHtml(str) {
 function App() {
   const [step, setStep] = useState(1)
   const [file, setFile] = useState(null)
+  const [files, setFiles] = useState([])
   const [previewUrl, setPreviewUrl] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const [productName, setProductName] = useState('')
@@ -64,18 +65,21 @@ function App() {
   const [showUnattributed, setShowUnattributed] = useState(false)
   const fileInputRef = useRef(null)
 
-  const applyFile = (f) => {
-    if (!f || !f.type.startsWith('image/')) return
-    setFile(f)
-    setPreviewUrl(URL.createObjectURL(f))
+  // 여러 장을 올리면 같은 상품의 다른 각도/배경까지 대조해 재현율이 오른다(최대 5장).
+  const applyFiles = (fileList) => {
+    const imgs = Array.from(fileList || []).filter((f) => f.type.startsWith('image/')).slice(0, 5)
+    if (imgs.length === 0) return
+    setFiles(imgs)
+    setFile(imgs[0])
+    setPreviewUrl(URL.createObjectURL(imgs[0]))
   }
 
-  const handleFileChange = (e) => applyFile(e.target.files[0])
+  const handleFileChange = (e) => applyFiles(e.target.files)
 
   const handleDrop = useCallback((e) => {
     e.preventDefault()
     setIsDragging(false)
-    applyFile(e.dataTransfer.files[0])
+    applyFiles(e.dataTransfer.files)
   }, [])
 
   const runScan = async () => {
@@ -87,7 +91,8 @@ function App() {
     setLoading(true)
     try {
       const formData = new FormData()
-      formData.append('file', file)
+      const toSend = files.length > 0 ? files : [file]
+      toSend.forEach((f) => formData.append('file', f))
       const res = await fetch(`${API_BASE}/api/scan`, { method: 'POST', body: formData })
       if (!res.ok) throw new Error('스캔 요청 실패')
       const data = await res.json()
@@ -321,6 +326,7 @@ function App() {
   const reset = () => {
     setStep(1)
     setFile(null)
+    setFiles([])
     setPreviewUrl(null)
     setProductName('')
     setSellerName('')
@@ -513,18 +519,24 @@ function App() {
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleFileChange}
                 hidden
               />
               {previewUrl ? (
-                <img src={previewUrl} alt="미리보기" className="preview" />
+                <>
+                  <img src={previewUrl} alt="미리보기" className="preview" />
+                  {files.length > 1 && (
+                    <span className="multi-badge">외 {files.length - 1}장 · 총 {files.length}장</span>
+                  )}
+                </>
               ) : (
                 <div className="dropzone-hint">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                     <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" />
                     <path d="M12 3v12M12 3l4 4M12 3 8 7" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  <span>클릭하거나 이미지를 끌어다 놓으세요</span>
+                  <span>클릭하거나 이미지를 끌어다 놓으세요 (여러 장 가능)</span>
                 </div>
               )}
             </div>

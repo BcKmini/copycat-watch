@@ -64,6 +64,25 @@ def test_scan_own_demo_image_finds_its_own_copies(client):
     assert "item000_copied_shopA.png" in matched_files
 
 
+def test_scan_accepts_multiple_images_and_aggregates(client):
+    """여러 장 업로드 시 각 후보를 모든 이미지와 대조해 최고 유사도를 취한다 →
+    매칭되는 이미지 1장 + 무관한 이미지 1장을 함께 올려도 사본을 찾아낸다."""
+    demo_dir = Path(main.DEMO_DIR)
+    with open(demo_dir / "item000_original.png", "rb") as f:
+        real = f.read()
+    noise = _png_bytes(color=(10, 250, 10))
+    resp = client.post("/api/scan", files=[
+        ("file", ("item000_original.png", real, "image/png")),
+        ("file", ("noise.png", noise, "image/png")),
+    ])
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["images"] == 2
+    assert data["mode"] == "demo"
+    matched_files = [m["file"] for m in data["matches"]]
+    assert "item000_copied_shopA.png" in matched_files
+
+
 def test_scan_rejects_non_image_file(client):
     resp = client.post(
         "/api/scan",

@@ -249,6 +249,7 @@ body {
 }
 
 .dropzone {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -289,6 +290,18 @@ body {
   max-height: 260px;
   object-fit: contain;
   border-radius: 8px;
+}
+
+.multi-badge {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
 }
 
 button {

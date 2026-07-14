@@ -18,8 +18,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY backend/requirements.txt backend/requirements-llm.txt ./
+COPY backend/requirements.txt backend/requirements-llm.txt backend/requirements-clip.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+# CLIP 임베딩 유사도용 onnxruntime(CPU, glibc manylinux 휠 → 컴파일 불필요).
+RUN pip install --no-cache-dir -r requirements-clip.txt
 # llama-cpp-python: abetlen 프리빌트 CPU 휠(linux_x86_64 태그)은 musl 링크라 Debian(glibc)에서
 # libllama.so 로드에 실패한다. PyPI sdist를 glibc로 직접 컴파일하고, 빌드 도구는 같은 레이어에서
 # 제거해 이미지 비대화를 막는다(런타임엔 libgomp1·libstdc++6만 필요).
@@ -34,11 +36,19 @@ RUN apt-get update \
 ENV LOCAL_LLM_PATH=/models/model.gguf
 # HF는 익명 curl(기본 User-Agent)·데이터센터 IP의 LFS 다운로드를 403으로 막을 때가 있어
 # 브라우저 User-Agent와 재시도를 명시한다(Cloud Build에서 확인된 403 회피).
+ENV CLIP_ONNX_PATH=/models/clip-vision.onnx
+# HF는 익명 curl(기본 User-Agent)·데이터센터 IP의 LFS 다운로드를 403으로 막을 때가 있어
+# 브라우저 User-Agent와 재시도를 명시한다(Cloud Build에서 확인된 403 회피).
+# 신고서 LLM(GGUF)과 스캔 보강용 CLIP(ONNX ViT-B/32) 모델을 함께 내려받아 내장한다.
 RUN mkdir -p /models \
     && curl -fSL --retry 5 --retry-delay 5 --retry-all-errors \
        -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
        -o /models/model.gguf \
-       "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true"
+       "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf?download=true" \
+    && curl -fSL --retry 5 --retry-delay 5 --retry-all-errors \
+       -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36" \
+       -o /models/clip-vision.onnx \
+       "https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/main/onnx/vision_model.onnx?download=true"
 
 COPY backend/ .
 

@@ -17,8 +17,15 @@ from fastapi.responses import FileResponse
 from PIL import Image
 from pydantic import BaseModel
 
+import clip_sim
 from llm import refine_document
-from matching import SIMILARITY_THRESHOLD, candidate_hashes, query_hashes, similarity_from_hashes
+from matching import (
+    SIMILARITY_THRESHOLD,
+    blend_similarity,
+    candidate_hashes,
+    query_hashes,
+    similarity_from_hashes,
+)
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -82,6 +89,39 @@ app.add_middleware(
 )
 
 _demo_hashes: dict[str, tuple[imagehash.ImageHash, imagehash.ImageHash]] = {}
+_demo_clip: dict = {}          # fname -> CLIP 임베딩(있을 때만). 지연 프리컴퓨트.
+_demo_clip_done = False
+
+
+class Query:
+    """업로드된 한 장 이상의 이미지 묶음. 후보를 각 이미지와 대조해 '가장 높은'
+    유사도를 취한다 — 같은 상품의 다른 각도/배경/조명 사본까지 잡기 위함(다중 이미지)."""
+
+    def __init__(self, images: list[Image.Image]):
+        self.hashes = [query_hashes(im) for im in images]
+        self.clips = [clip_sim.embed(im) for im in images]  # CLIP 미사용 시 전부 None
+        self._clip_present = [c for c in self.clips if c is not None]
+
+    def best_hash_sim(self, cand_hash, cand_color) -> float:
+        return max(
+            similarity_from_hashes(qh[0], qh[1], qh[2], cand_hash, cand_color)
+            for qh in self.hashes
+        )
+
+    def best_clip_pct(self, cand_emb) -> float | None:
+        if not self._clip_present or cand_emb is None:
+            return None
+        return max(clip_sim.cosine_pct(q, cand_emb) for q in self._clip_present)
+
+
+def _ensure_demo_clip():
+    """데모 이미지의 CLIP 임베딩을 한 번만 계산해 캐시한다. CLIP 미사용 환경에선 아무 것도 안 함."""
+    global _demo_clip_done
+    if _demo_clip_done or not clip_sim.available():
+        return
+    for fname in _demo_hashes:
+        _demo_clip[fname] = clip_sim.embed(Image.open(os.path.join(DEMO_DIR, fname)).convert("RGB"))
+    _demo_clip_done = True
 
 
 def _load_demo_hashes():
@@ -135,20 +175,21 @@ _OG_IMAGE_RE = re.compile(
 _IMG_TAG_RE = re.compile(r'<img[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
 
 
-def _verify_candidate_image(query_h, url: str) -> float | None:
-    """후보 이미지를 직접 내려받아 프로덕션 유사도 알고리즘으로 실측 점수를 계산한다.
-    다운로드/디코딩에 실패하면 None (검증 불가)."""
+def _verify_candidate_image(query: "Query", url: str) -> tuple[float | None, float | None]:
+    """후보 이미지를 직접 내려받아 실측한다. (해시 유사도, CLIP 유사도)를 돌려주며,
+    다운로드/디코딩 실패 시 (None, None). CLIP은 해시 게이트를 통과한 후보에만 계산해
+    불필요한 추론을 피한다."""
     if not url or not url.startswith(("http://", "https://")):
-        return None
+        return None, None
     try:
         resp = requests.get(url, headers=FETCH_HEADERS, timeout=VERIFY_TIMEOUT, stream=True)
         resp.raise_for_status()
         data = resp.raw.read(VERIFY_MAX_BYTES + 1, decode_content=True)
         if len(data) > VERIFY_MAX_BYTES:
-            return None
+            return None, None
         img = Image.open(io.BytesIO(data))
         if img.width * img.height > 25_000_000:
-            return None  # 25MP 초과 초대형 이미지는 디코딩 자체가 메모리 폭탄이라 스킵
+            return None, None  # 25MP 초과 초대형 이미지는 디코딩 자체가 메모리 폭탄이라 스킵
         # 해시는 어차피 32x32로 축소해 계산하므로 저해상도 디코딩해도 결과가 같다.
         # draft는 JPEG를 디코딩 단계에서 축소해 메모리 사용을 수십 배 줄인다 (OOM 방지).
         img.draft("RGB", (512, 512))
@@ -156,9 +197,11 @@ def _verify_candidate_image(query_h, url: str) -> float | None:
         img = img.convert("RGB")
         img.thumbnail((512, 512))
         chash, ccolor = candidate_hashes(img)
-        return similarity_from_hashes(query_h[0], query_h[1], query_h[2], chash, ccolor)
+        hash_sim = query.best_hash_sim(chash, ccolor)
+        clip_pct = query.best_clip_pct(clip_sim.embed(img)) if hash_sim >= SIMILARITY_THRESHOLD else None
+        return hash_sim, clip_pct
     except Exception:
-        return None
+        return None, None
 
 
 def _extract_page_image_urls(page_url: str) -> list[str]:
@@ -186,31 +229,31 @@ def _extract_page_image_urls(page_url: str) -> list[str]:
     return out
 
 
-def _verify_candidate(query_h, cand: dict) -> tuple[float | None, str | None]:
+def _verify_candidate(query: "Query", cand: dict) -> tuple[float | None, float | None, str | None]:
     """후보를 실측 검증한다. 1) 후보 이미지 직접 대조 → 2) 실패 시 게시 페이지를
     직접 방문해서 페이지 안의 이미지들(og:image, 본문 img)을 하나씩 대조.
-    반환: (실측 유사도 or None, 검증 방식 'image'/'page'/None)"""
+    반환: (해시 유사도 or None, CLIP 유사도 or None, 검증 방식 'image'/'page'/None)"""
     if cand.get("image_url"):
-        sim = _verify_candidate_image(query_h, cand["image_url"])
-        if sim is not None:
-            return sim, "image"
+        hs, cp = _verify_candidate_image(query, cand["image_url"])
+        if hs is not None:
+            return hs, cp, "image"
 
     if cand.get("source_url"):
         try:
             page_image_urls = _extract_page_image_urls(cand["source_url"])
         except Exception:
-            return None, None
-        best = None
+            return None, None, None
+        best = None  # (해시 유사도, CLIP 유사도)
         for img_url in page_image_urls:
-            sim = _verify_candidate_image(query_h, img_url)
-            if sim is not None and (best is None or sim > best):
-                best = sim
-                if sim >= 90:  # 확실한 매치면 더 볼 필요 없음
+            hs, cp = _verify_candidate_image(query, img_url)
+            if hs is not None and (best is None or hs > best[0]):
+                best = (hs, cp)
+                if hs >= 90:  # 확실한 매치면 더 볼 필요 없음
                     break
         if best is not None:
-            return best, "page"
+            return best[0], best[1], "page"
 
-    return None, None
+    return None, None, None
 
 
 def _normalize_url(url: str | None) -> str:
@@ -237,7 +280,7 @@ def _dedupe_matches(matches: list[dict]) -> list[dict]:
     return list(best_by_key.values())
 
 
-def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
+def _scan_web(content: bytes, query: "Query") -> dict | None:
     """2단계 검색 파이프라인:
     1) Google Vision Web Detection으로 인터넷 전체에서 후보 페이지/이미지를 수집 (재현율 확보)
     2) 각 후보 이미지를 서버가 직접 내려받아 프로덕션 유사도 알고리즘(phash+colorhash)으로
@@ -299,9 +342,8 @@ def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
 
     # 2단계: 전 후보를 병렬 실측 검증. 이미지 직접 대조가 막히면 게시 페이지를
     # 직접 방문(딥 검증)해서 페이지 안 이미지들과 대조한다.
-    query_h = query_hashes(query_img)
     with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as pool:
-        verified = list(pool.map(lambda c: _verify_candidate(query_h, c), candidates))
+        verified = list(pool.map(lambda c: _verify_candidate(query, c), candidates))
 
     # 검증 불가(이미지/페이지 모두 차단) 시 Vision 등급 기반 보수적 점수로 폴백.
     # 근거 없는 page/similar는 검증 실패 시 0점 - 노이즈를 결과에 올리지 않는다.
@@ -323,18 +365,22 @@ def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
     }
 
     matches = []
-    for cand, (measured, via) in zip(candidates, verified):
+    for cand, (measured, clip_pct, via) in zip(candidates, verified):
+        # 게이팅(채택 여부)은 해시/티어 점수로만 판단(검증된 임계값 유지). CLIP은 채택된
+        # 후보의 표시 유사도를 블렌드해 점수·정렬 품질만 높인다.
         if measured is not None:
-            similarity = measured
+            gate_sim = measured
             note = f"{TIER_NOTE[cand['tier']]} · {VERIFY_NOTE[via]} {measured}%"
+            if clip_pct is not None:
+                note += " · CLIP 임베딩 보정"
         else:
-            similarity = TIER_FALLBACK[cand["tier"]]
+            gate_sim = TIER_FALLBACK[cand["tier"]]
             note = f"{TIER_NOTE[cand['tier']]} · 이미지 직접 검증 불가(사이트 차단)"
-        if similarity < SIMILARITY_THRESHOLD:
+        if gate_sim < SIMILARITY_THRESHOLD:
             continue
         matches.append({
             "file": cand["key"],
-            "similarity": similarity,
+            "similarity": blend_similarity(gate_sim, clip_pct),
             "shop": cand["title"],
             "price": "-",
             "note": note,
@@ -356,21 +402,19 @@ def _scan_web(content: bytes, query_img: Image.Image) -> dict | None:
     return {"matches": matches, "label": label}
 
 
-def _scan_demo(query_img: Image.Image) -> list[dict]:
-    query_hash, query_flip_hash, query_color_hash = query_hashes(query_img)
-
+def _scan_demo(query: "Query") -> list[dict]:
+    _ensure_demo_clip()
     matches = []
     for fname, (cand_hash, cand_color_hash) in _demo_hashes.items():
         if "original" in fname or "unrelated" in fname:
             continue
-        similarity = similarity_from_hashes(
-            query_hash, query_flip_hash, query_color_hash, cand_hash, cand_color_hash
-        )
-        if similarity >= SIMILARITY_THRESHOLD:
+        hash_sim = query.best_hash_sim(cand_hash, cand_color_hash)
+        if hash_sim >= SIMILARITY_THRESHOLD:
+            clip_pct = query.best_clip_pct(_demo_clip.get(fname))
             listing = _listings.get(fname, {"shop": "알 수 없는 판매처", "price": "-", "note": ""})
             matches.append({
                 "file": fname,
-                "similarity": similarity,
+                "similarity": blend_similarity(hash_sim, clip_pct),
                 "shop": listing["shop"],
                 "price": listing["price"],
                 "note": listing["note"],
@@ -384,28 +428,44 @@ def _scan_demo(query_img: Image.Image) -> list[dict]:
     return matches
 
 
+MAX_SCAN_IMAGES = 5  # 다중 업로드 상한(같은 상품의 여러 각도). 과도한 Vision/디코딩 비용 방지.
+
+
 @app.post("/api/scan")
-def scan(file: UploadFile = File(...)):
+def scan(file: list[UploadFile] = File(...)):
     # 주의: async def로 만들면 안 된다 - _scan_web의 블로킹 작업(외부 이미지 수십 장
     # 다운로드)이 이벤트 루프를 통째로 막아서, 스캔 중 /health가 응답 못 해
     # k8s liveness가 팟을 죽인다(502의 원인이었음). sync def는 FastAPI가
     # 워커 스레드에서 실행하므로 이벤트 루프가 계속 살아있다.
-    content = file.file.read()
-    if len(content) > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, "이미지 용량이 너무 커요 (최대 10MB)")
-    try:
-        query_img = Image.open(io.BytesIO(content))
-        query_img.load()  # PIL은 open()에서 헤더만 읽고 실제 픽셀 디코딩은 미루기 때문에,
-        # 잘린(truncated) 파일은 여기서 강제로 디코딩해서 미리 걸러낸다
-        query_img = query_img.convert("RGB")
-    except Exception:
-        raise HTTPException(400, "이미지 파일을 읽을 수 없습니다")
+    #
+    # 여러 장을 올리면 각 후보를 모든 업로드 이미지와 대조해 '가장 높은' 유사도를 취한다
+    # → 같은 상품의 다른 각도/배경 사본까지 놓치지 않아 재현율이 오른다.
+    images, contents = [], []
+    for f in file[:MAX_SCAN_IMAGES]:
+        content = f.file.read()
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise HTTPException(413, "이미지 용량이 너무 커요 (최대 10MB)")
+        try:
+            img = Image.open(io.BytesIO(content))
+            img.load()  # PIL은 open()에서 헤더만 읽고 실제 픽셀 디코딩은 미루기 때문에,
+            # 잘린(truncated) 파일은 여기서 강제로 디코딩해서 미리 걸러낸다
+            img = img.convert("RGB")
+        except Exception:
+            raise HTTPException(400, "이미지 파일을 읽을 수 없습니다")
+        images.append(img)
+        contents.append(content)
 
-    web_result = _scan_web(content, query_img)
+    if not images:
+        raise HTTPException(400, "이미지가 필요합니다")
+
+    query = Query(images)
+    # 후보 발굴(Vision Web Detection)은 첫 이미지로 하고, 검증은 모든 이미지로 한다.
+    web_result = _scan_web(contents[0], query)
     if web_result is not None:
-        return {"matches": web_result["matches"], "mode": "web", "label": web_result["label"]}
+        return {"matches": web_result["matches"], "mode": "web",
+                "label": web_result["label"], "images": len(images)}
 
-    return {"matches": _scan_demo(query_img), "mode": "demo", "label": None}
+    return {"matches": _scan_demo(query), "mode": "demo", "label": None, "images": len(images)}
 
 
 PLATFORM_DOMAIN_HINTS = [

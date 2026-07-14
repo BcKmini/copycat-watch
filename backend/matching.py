@@ -45,3 +45,18 @@ def similarity_from_hashes(
     base_similarity = max(0.0, 100.0 - structure_distance * 3)
     color_penalty = min(color_distance * COLOR_PENALTY_PER_UNIT, MAX_COLOR_PENALTY)
     return round(max(0.0, base_similarity - color_penalty), 1)
+
+
+CLIP_BLEND_WEIGHT = 0.5  # 표시 유사도에서 CLIP이 차지하는 가중치(나머지는 해시 점수)
+
+
+def blend_similarity(hash_similarity: float, clip_pct: float | None) -> float:
+    """해시 유사도와 CLIP 유사도를 합쳐 '표시용' 유사도를 만든다.
+
+    게이팅(채택 임계값)은 여전히 해시 유사도가 결정하고(matching 파이프라인 불변),
+    이 블렌드는 이미 채택된 후보의 점수·정렬 품질만 높인다. clip_pct가 없으면(폴백)
+    해시 유사도를 그대로 돌려준다."""
+    if clip_pct is None:
+        return hash_similarity
+    blended = (1 - CLIP_BLEND_WEIGHT) * hash_similarity + CLIP_BLEND_WEIGHT * clip_pct
+    return round(blended, 1)
