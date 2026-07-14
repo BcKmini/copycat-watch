@@ -8,26 +8,26 @@
 <br/>
 
 <!-- 언어 · 런타임 -->
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![Node.js](https://img.shields.io/badge/Node.js-20-5FA04E?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![Node.js](https://img.shields.io/badge/Node.js-20-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)
 
 <!-- 프레임워크 -->
-![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-8.1-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Uvicorn](https://img.shields.io/badge/Uvicorn-0.30-2094F3?style=for-the-badge&logo=gunicorn&logoColor=white)
+![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-8.1-646CFF?style=flat-square&logo=vite&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)
+![Uvicorn](https://img.shields.io/badge/Uvicorn-0.30-2094F3?style=flat-square&logo=gunicorn&logoColor=white)
 
 <!-- 인프라 · AI -->
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Kubernetes](https://img.shields.io/badge/Kubernetes_(k3d)-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)
-![Cloud Run](https://img.shields.io/badge/Google_Cloud_Run-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
-![nginx](https://img.shields.io/badge/nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
-![llama.cpp](https://img.shields.io/badge/llama.cpp-Qwen2.5--1.5B-000000?style=for-the-badge&logo=llama&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes_(k3d)-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
+![Cloud Run](https://img.shields.io/badge/Google_Cloud_Run-4285F4?style=flat-square&logo=googlecloud&logoColor=white)
+![nginx](https://img.shields.io/badge/nginx-009639?style=flat-square&logo=nginx&logoColor=white)
+![llama.cpp](https://img.shields.io/badge/llama.cpp-Qwen2.5--1.5B-000000?style=flat-square&logo=llama&logoColor=white)
 
 <br/>
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-copycat--watch-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)](https://copycat-watch-655097859028.asia-northeast3.run.app)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-copycat--watch-4285F4?style=flat-square&logo=googlecloud&logoColor=white)](https://copycat-watch-655097859028.asia-northeast3.run.app)
 
 **상시 구동 데모 → https://copycat-watch-655097859028.asia-northeast3.run.app**
 
@@ -48,7 +48,6 @@
 - [빠르게 실행해보기](#빠르게-실행해보기)
 - [API](#api)
 - [정확도 검증 & 테스트](#정확도-검증--테스트)
-- [향후 로드맵](#향후-로드맵)
 
 ---
 
@@ -118,14 +117,12 @@ flowchart TB
         UI["React SPA<br/>(Vite)"]
     end
 
-    subgraph K8s["Kubernetes (k3d / 로컬 클러스터)"]
-        subgraph FrontendPod["copycat-frontend Deployment"]
-            Nginx["nginx<br/>정적 파일 서빙 + /api 리버스 프록시"]
-        end
-        subgraph BackendPod["copycat-backend (FastAPI)"]
-            API["FastAPI"]
+    subgraph Deploy["배포 단위 (Cloud Run 단일 컨테이너 · 또는 k3d 파드)"]
+        Nginx["nginx<br/>정적 서빙 + /api 리버스 프록시"]
+        subgraph Backend["FastAPI (uvicorn)"]
+            API["API 라우터"]
             Match["matching.py<br/>(phash + colorhash)"]
-            LLM["내장 LLM<br/>Qwen2.5-1.5B · llama.cpp<br/>(신고서 문장 다듬기, 지연 로딩)"]
+            LLM["내장 LLM (Cloud Run 전용)<br/>Qwen2.5-1.5B · llama.cpp<br/>지연 로딩 · 없으면 템플릿 폴백"]
         end
     end
 
@@ -143,14 +140,14 @@ flowchart TB
     API -.->|"Vision 실패 시 폴백"| DemoData["demo_data/<br/>CC 라이선스 이미지셋"]
 
     style Client fill:#eef0ff,stroke:#4338ca
-    style K8s fill:#f4f4f8,stroke:#888
+    style Deploy fill:#f4f4f8,stroke:#888
     style External fill:#fdecea,stroke:#c0392b
 ```
 
-배포 토폴로지는 **단일 컨테이너**다 — nginx가 정적 파일 서빙과 `/api` 리버스 프록시를 동시에
-처리하고(프론트는 항상 same-origin → CORS 없음), 같은 컨테이너 안의 uvicorn이 백엔드를 담당한다.
-Cloud Run에서는 이 이미지에 LLM(약 1GB)이 내장되고, 로컬 개발/k3d에서는 LLM 없이 템플릿 폴백으로
-동작한다(경량 실행).
+**단일 컨테이너** 토폴로지다 — nginx가 정적 서빙과 `/api` 리버스 프록시를 함께 처리해 프론트는
+항상 same-origin으로 백엔드를 호출하고(CORS 없음), 같은 컨테이너의 uvicorn이 API를 담당한다.
+신고서 생성용 LLM(약 1GB)은 **Cloud Run 이미지에만 내장**되며, 로컬 개발·k3d에서는 LLM 없이
+템플릿 폴백으로 가볍게 돈다.
 
 ## 기술 스택
 
@@ -326,11 +323,3 @@ cd backend && pytest tests/ -v          # 백엔드 테스트
 cd experiments && python run_experiment.py   # 정확도 실험 재현
 cd frontend && node drive.mjs           # 실제 화면 시각 검증
 ```
-
-## 향후 로드맵
-
-- CLIP 임베딩 기반 유사도로 교체 (구조·색상·질감을 함께 학습된 표현으로 비교)
-- 정기 자동 모니터링 + 이메일 알림
-- 다중 이미지 업로드로 스캔 정확도 향상
-- 플랫폼 신고 API 직접 연동 (수동 제출 없이 원클릭 신고)
-- 변호사·법무법인 매칭 연동 (법적 대응 가이드에서 바로 상담 신청)
