@@ -1,10 +1,39 @@
+<div align="center">
+
 # 카피캣 워치 (Copycat Watch)
 
-**내 상품 사진이 어디서 무단 도용되고 있는지 AI가 실시간으로 찾아주고, 신고서 초안까지
-자동으로 써주는 웹 서비스.**
+**내 상품 사진이 어디서 무단 도용되고 있는지 AI가 실시간으로 찾아주고,<br/>
+신고서 초안까지 자동으로 써주는 웹 서비스.**
 
+<br/>
 
-> 실행 방법은 [빠르게 실행해보기](#빠르게-실행해보기) 참고
+<!-- 언어 · 런타임 -->
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![Node.js](https://img.shields.io/badge/Node.js-20-5FA04E?style=for-the-badge&logo=nodedotjs&logoColor=white)
+
+<!-- 프레임워크 -->
+![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-8.1-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Uvicorn](https://img.shields.io/badge/Uvicorn-0.30-2094F3?style=for-the-badge&logo=gunicorn&logoColor=white)
+
+<!-- 인프라 · AI -->
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes_(k3d)-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)
+![Cloud Run](https://img.shields.io/badge/Google_Cloud_Run-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)
+![nginx](https://img.shields.io/badge/nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
+![llama.cpp](https://img.shields.io/badge/llama.cpp-Qwen2.5--1.5B-000000?style=for-the-badge&logo=llama&logoColor=white)
+
+<br/>
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-copycat--watch-4285F4?style=for-the-badge&logo=googlecloud&logoColor=white)](https://copycat-watch-655097859028.asia-northeast3.run.app)
+
+**상시 구동 데모 → https://copycat-watch-655097859028.asia-northeast3.run.app**
+
+</div>
+
+> 로컬 실행은 [빠르게 실행해보기](#빠르게-실행해보기), 클라우드 배포는 [`DEPLOY.md`](DEPLOY.md) 참고.
 
 ---
 
@@ -93,15 +122,15 @@ flowchart TB
         subgraph FrontendPod["copycat-frontend Deployment"]
             Nginx["nginx<br/>정적 파일 서빙 + /api 리버스 프록시"]
         end
-        subgraph BackendPod["copycat-backend Deployment"]
+        subgraph BackendPod["copycat-backend (FastAPI)"]
             API["FastAPI"]
             Match["matching.py<br/>(phash + colorhash)"]
+            LLM["내장 LLM<br/>Qwen2.5-1.5B · llama.cpp<br/>(신고서 문장 다듬기, 지연 로딩)"]
         end
     end
 
     subgraph External["외부 서비스"]
         Vision["Google Cloud Vision API<br/>(Web Detection)"]
-        Claude["Claude API<br/>(신고서 문서 생성)"]
         Web["실제 웹 페이지들<br/>(이미지 실측 검증 대상)"]
     end
 
@@ -110,7 +139,7 @@ flowchart TB
     API -->|"1. 후보 수집"| Vision
     API -->|"2. 실측 대조 다운로드"| Web
     API --> Match
-    API -->|"신고서 생성"| Claude
+    API -->|"신고서 초안 → 가드 검증"| LLM
     API -.->|"Vision 실패 시 폴백"| DemoData["demo_data/<br/>CC 라이선스 이미지셋"]
 
     style Client fill:#eef0ff,stroke:#4338ca
@@ -118,58 +147,107 @@ flowchart TB
     style External fill:#fdecea,stroke:#c0392b
 ```
 
-Ingress 없이 nginx가 정적 파일 서빙과 `/api` 리버스 프록시를 동시에 처리하므로,
-프론트엔드는 항상 same-origin으로 백엔드를 호출한다 (CORS 걱정 없음).
+배포 토폴로지는 **단일 컨테이너**다 — nginx가 정적 파일 서빙과 `/api` 리버스 프록시를 동시에
+처리하고(프론트는 항상 same-origin → CORS 없음), 같은 컨테이너 안의 uvicorn이 백엔드를 담당한다.
+Cloud Run에서는 이 이미지에 LLM(약 1GB)이 내장되고, 로컬 개발/k3d에서는 LLM 없이 템플릿 폴백으로
+동작한다(경량 실행).
 
 ## 기술 스택
 
-| 영역 | 사용 기술 |
-|---|---|
-| 프론트엔드 | React 19, Vite 8, 순수 CSS(변수 기반 다크모드) |
-| 백엔드 | FastAPI, Pillow, imagehash(phash/colorhash), requests |
-| AI | Google Cloud Vision API(Web Detection), Anthropic Claude API(Haiku) |
-| 인프라 | Docker, Kubernetes(k3d), nginx |
-| 테스트 | pytest(백엔드 30개), Playwright(프론트 시각 검증) |
-| 실험 | matplotlib(정확도 차트), Openverse API(CC 라이선스 데이터 수집) |
+버전 근거: 백엔드 `requirements.txt` · 프론트 `package.json` · 컨테이너 base 이미지 태그.
+
+**프론트엔드**
+
+![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-8.1-646CFF?style=flat-square&logo=vite&logoColor=white)
+![plugin-react](https://img.shields.io/badge/@vitejs/plugin--react-6.0-646CFF?style=flat-square&logo=vite&logoColor=white)
+![oxlint](https://img.shields.io/badge/oxlint-1.71-CE412B?style=flat-square&logo=rust&logoColor=white)
+![CSS](https://img.shields.io/badge/CSS-변수_기반_다크모드-1572B6?style=flat-square&logo=css3&logoColor=white)
+
+**백엔드**
+
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688?style=flat-square&logo=fastapi&logoColor=white)
+![Uvicorn](https://img.shields.io/badge/Uvicorn-0.30.6-2094F3?style=flat-square&logo=gunicorn&logoColor=white)
+![Pillow](https://img.shields.io/badge/Pillow-10.4.0-4B8BBE?style=flat-square&logo=python&logoColor=white)
+![imagehash](https://img.shields.io/badge/imagehash-4.3.1-555555?style=flat-square)
+![httpx](https://img.shields.io/badge/httpx-0.27.2-2A6DB0?style=flat-square)
+![requests](https://img.shields.io/badge/requests-2.32.3-555555?style=flat-square)
+
+**AI**
+
+![Google Vision](https://img.shields.io/badge/Google_Cloud_Vision-Web_Detection-4285F4?style=flat-square&logo=googlecloud&logoColor=white)
+![Qwen2.5](https://img.shields.io/badge/Qwen2.5--1.5B--Instruct-GGUF_Q4__K__M-6236FF?style=flat-square)
+![llama-cpp-python](https://img.shields.io/badge/llama--cpp--python-0.3.2-000000?style=flat-square&logo=llama&logoColor=white)
+
+**인프라 · 테스트**
+
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Cloud Run](https://img.shields.io/badge/Google_Cloud_Run-4285F4?style=flat-square&logo=googlecloud&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes_(k3d)-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
+![nginx](https://img.shields.io/badge/nginx-009639?style=flat-square&logo=nginx&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-20-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-30_tests-0A9EDC?style=flat-square&logo=pytest&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-1.61-2EAD33?style=flat-square&logo=playwright&logoColor=white)
+
+> **AI 아키텍처 원칙** — 법 조항·금액·기한 같은 **법적 사실은 전부 코드 템플릿이 소유**하고,
+> LLM은 그 완성본을 자연스러운 한국어로 '다시 쓰기'만 한다. 모델 출력은 조항·금액·문서 구분자
+> 보존 여부를 검증하는 가드([`backend/llm.py`](backend/llm.py))를 통과해야만 채택되며, 하나라도
+> 어긋나면 원본 템플릿을 그대로 반환한다 → **환각이 최종 문서에 반영되지 않는다.**
 
 ## 디렉토리 구조
 
+역할별로 4개 블록으로 나뉜다 — **① 애플리케이션**(backend/frontend), **② 배포**(Cloud Run 단일
+컨테이너 · k8s), **③ 정확도 실험**, **④ 문서**.
+
 ```
 copycat-watch/
-├── backend/                     # FastAPI 서버
-│   ├── main.py                  #   API 엔드포인트 (/api/scan, /api/report, ...)
-│   ├── matching.py              #   유사도 매칭 알고리즘 (phash + colorhash)
-│   ├── gen_demo_data.py         #   데모 데이터셋 생성 스크립트
-│   ├── demo_data/               #   104개 상품 × 3장(원본+도용본 2장) CC 라이선스 이미지
-│   ├── tests/                   #   pytest 30개 (매칭 로직 + API 엔드포인트)
-│   ├── requirements.txt         #   프로덕션 의존성
-│   ├── requirements-dev.txt     #   +pytest (개발용)
-│   └── Dockerfile
 │
-├── frontend/                    # React SPA
+├── backend/                     # ── 백엔드 (FastAPI) ──────────────────
+│   ├── main.py                  #   API 엔드포인트 (/api/scan · report · legal-guide)
+│   ├── matching.py              #   유사도 매칭 알고리즘 (phash + colorhash)
+│   ├── llm.py                   #   로컬 LLM 신고서 다듬기 + 법적 사실 보존 가드
+│   ├── gen_demo_data.py         #   데모 데이터셋 생성 스크립트
+│   ├── demo_data/               #   상품 이미지 (원본 + 도용본 2장 세트)
+│   ├── tests/                   #   pytest 30개 (matching · api · llm 가드)
+│   ├── requirements.txt         #   프로덕션 의존성
+│   ├── requirements-llm.txt     #   로컬 LLM 의존성 (Cloud Run 이미지에서만 설치)
+│   ├── requirements-dev.txt     #   +pytest (개발용)
+│   └── Dockerfile               #   백엔드 단독 이미지 (로컬/k8s용)
+│
+├── frontend/                    # ── 프론트엔드 (React SPA) ────────────
 │   ├── src/
-│   │   ├── App.jsx              #   전체 UI (3단계: 상품등록 → 스캔결과 → 신고서)
+│   │   ├── App.jsx              #   전체 UI (상품등록 → 스캔결과 → 신고서)
 │   │   └── App.css              #   디자인 시스템 (CSS 변수, 라이트/다크)
 │   ├── drive.mjs                #   Playwright 시각 검증 스크립트
-│   ├── nginx.conf.template      #   정적 서빙 + /api 프록시 설정
-│   └── Dockerfile
+│   ├── vite.config.js           #   Vite 빌드 설정
+│   └── Dockerfile               #   프론트 단독 이미지 (nginx, 로컬/k8s용)
 │
-├── k8s/                         # Kubernetes 매니페스트
+├── Dockerfile                   # ── 배포 ①: Cloud Run 단일 컨테이너 ───
+├── deploy/                      #   (프론트 빌드 + 백엔드 + nginx + LLM 내장)
+│   ├── nginx.conf               #   정적 서빙 + /api 프록시(127.0.0.1:8000)
+│   └── start.sh                 #   uvicorn(백그라운드) + nginx(포그라운드) 진입점
+├── docker-compose.yml           #
+├── k8s/                         # ── 배포 ②: Kubernetes(k3d) 매니페스트 ─
 │   ├── backend.yaml             #   Deployment + Service (리소스 제한 포함)
 │   ├── frontend.yaml            #   Deployment + Service
-│   ├── ingress.yaml
+│   ├── ingress.yaml             #
 │   └── secret.example.yaml      #   API 키 시크릿 템플릿
 │
-├── experiments/                 # 정확도 실험 (재현 가능)
+├── experiments/                 # ── 정확도 실험 (재현 가능) ───────────
 │   ├── crawl_dataset.py         #   Openverse(CC 라이선스) 이미지 수집
 │   ├── run_experiment.py        #   임계값 스윕 + 정확도 측정 + 차트 생성
-│   ├── dataset/                 #   수집된 실험용 이미지 + manifest(출처/라이선스)
-│   └── results/                 #   실험 결과(CSV/JSON/PNG)
+│   ├── dataset/                 #   실험용 이미지 + manifest(출처/라이선스)
+│   └── results/                 #   실험 결과 (CSV / JSON / PNG)
 │
-├── docker-compose.yml           # 로컬 통합 실행
-├── EXPERIMENT.md                # 정확도 실험 전체 기록 (6 iteration)
-└── README.md                    # 이 문서
+├── DEPLOY.md                    # ── 문서 ──────────────────────────────
+├── EXPERIMENT.md                #   정확도 실험 전체 기록 (6 iteration)
+└── README.md                    #   이 문서
 ```
+
+> **배포 이미지가 2벌인 이유** — 루트 `Dockerfile`은 프론트+백엔드+LLM을 하나로 묶은 **Cloud Run
+> 전용**(URL 1개, scale-to-zero)이고, `backend/Dockerfile`·`frontend/Dockerfile`은 **로컬 개발과
+> k8s용**으로 서비스를 분리해 띄운다. 목적이 달라 공존한다.
 
 ## 빠르게 실행해보기
 
@@ -195,12 +273,28 @@ kubectl create secret generic copycat-secrets --from-env-file=backend/.env
 kubectl apply -f k8s/backend.yaml -f k8s/frontend.yaml -f k8s/ingress.yaml
 ```
 
-### 필요한 API 키 (둘 다 없어도 데모 모드로 정상 동작)
+### 3. Google Cloud Run으로 상시 구동 (프로덕션)
+
+프론트 + 백엔드 + 내장 LLM을 **단일 컨테이너**로 묶어 URL 하나로 배포한다. 요청이 없으면
+인스턴스가 0으로 축소(scale-to-zero)돼 비용이 거의 들지 않는다. **반드시 레포 루트에서** 실행한다.
+
+```bash
+gcloud run deploy copycat-watch --source . --region asia-northeast3 \
+  --allow-unauthenticated --memory 2Gi --cpu 2 --cpu-boost \
+  --set-secrets "GOOGLE_VISION_API_KEY=google-vision-api-key:latest"
+```
+
+전체 절차(시크릿 등록·IAM·비용)는 [`DEPLOY.md`](DEPLOY.md) 참고.
+현재 배포본 → **https://copycat-watch-655097859028.asia-northeast3.run.app**
+
+### 필요한 API 키 (없어도 데모 모드로 정상 동작)
 
 | 키 | 용도 | 없을 때 동작 |
 |---|---|---|
 | `GOOGLE_VISION_API_KEY` | 실시간 웹 검색 | 내장 데모 데이터셋으로 폴백 |
-| `ANTHROPIC_API_KEY` | AI 신고서 생성 | 고정 템플릿으로 폴백 (문서 구조는 동일) |
+
+> 신고서·법적 가이드 생성은 **이미지에 내장한 로컬 LLM**(Qwen2.5-1.5B)이 담당하므로 외부 AI
+> API 키가 필요 없다. LLM이 없는 환경(로컬/k3d)에서는 고정 템플릿으로 폴백한다(문서 구조 동일).
 
 `backend/.env`에 설정하면 된다 (`.env.example` 참고).
 

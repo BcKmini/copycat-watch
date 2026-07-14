@@ -46,26 +46,23 @@ gcloud services enable \
 런타임에 주입하도록 한다.
 
 ```bash
-# Anthropic API 키 (신고서·법적 가이드 AI 생성용)
-printf '%s' "sk-ant-..." | gcloud secrets create anthropic-api-key --data-file=-
-
 # Google Vision API 키 (웹 이미지 검색용)
 printf '%s' "AIza..." | gcloud secrets create google-vision-api-key --data-file=-
 ```
 
-> 키가 없어도 앱은 데모 폴백 모드로 동작한다(내장 데모 데이터셋으로 매칭, 신고서는
-> 템플릿 기반). 두 키를 생략하면 아래 배포 명령에서 `--set-secrets` 부분만 빼면 된다.
+> 신고서·법적 가이드는 이미지에 내장한 오픈소스 LLM(Qwen2.5-1.5B)이 생성하므로 **Anthropic
+> 키는 더 이상 필요 없다**(코드에서 제거됨).
+> Vision 키가 없어도 앱은 데모 폴백 모드로 동작한다(내장 데모 데이터셋으로 매칭). 키를
+> 생략하면 아래 배포 명령에서 `--set-secrets` 부분만 빼면 된다.
 
 ### Cloud Run 런타임 서비스 계정에 시크릿 접근 권한 부여
 ```bash
 PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
 SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
-for SECRET in anthropic-api-key google-vision-api-key; do
-  gcloud secrets add-iam-policy-binding "$SECRET" \
-    --member="serviceAccount:${SA}" \
-    --role="roles/secretmanager.secretAccessor"
-done
+gcloud secrets add-iam-policy-binding google-vision-api-key \
+  --member="serviceAccount:${SA}" \
+  --role="roles/secretmanager.secretAccessor"
 ```
 
 ---
@@ -80,18 +77,23 @@ gcloud run deploy copycat-watch \
   --source . \
   --region asia-northeast3 \
   --allow-unauthenticated \
-  --memory 1Gi \
-  --cpu 1 \
+  --memory 2Gi \
+  --cpu 2 \
+  --cpu-boost \
   --timeout 300 \
   --concurrency 20 \
   --min-instances 0 \
   --max-instances 3 \
-  --set-secrets "ANTHROPIC_API_KEY=anthropic-api-key:latest,GOOGLE_VISION_API_KEY=google-vision-api-key:latest"
+  --set-secrets "GOOGLE_VISION_API_KEY=google-vision-api-key:latest"
 ```
+
+> **반드시 레포 루트에서 실행**한다. `backend/` 등 하위 디렉터리에서 `--source .`를 실행하면
+> 루트 Dockerfile(nginx+모델 내장) 대신 그 디렉터리의 Dockerfile이 빌드돼 8080 기동에 실패한다.
 
 - `--region asia-northeast3` : 서울 리전(한국 사용자 지연시간 최소)
 - `--allow-unauthenticated` : 공개 웹앱이므로 누구나 접근 허용
-- `--memory 1Gi` : 이미지 여러 장 동시 해싱 시 OOM 방지(k8s에서 검증한 값과 동일)
+- `--memory 2Gi` : 신고서 요청 시 내장 LLM(Qwen2.5-1.5B) 로드에 ~1.5GB 필요 → 1Gi면 OOM(SIGKILL)
+- `--cpu 2` `--cpu-boost` : LLM CPU 추론 지연 완화 + 대용량 이미지 콜드스타트 가속
 - `--timeout 300` : 스캔이 오래 걸릴 수 있어 요청 타임아웃 5분
 - `--min-instances 0` : 요청 없으면 0으로 축소(비용 절감). 콜드스타트가 싫으면 `1`
 - `--max-instances 3` : 폭주 시 상한(비용 폭발 방지)
@@ -108,7 +110,7 @@ gcloud run deploy copycat-watch \
 | Cloud Run | 요청 처리 중 vCPU·메모리 사용 시간만 과금 | 무료 등급: 월 200만 요청 / 360k GB-초 / 180k vCPU-초. 데모/공모전 수준 트래픽은 사실상 무료 |
 | min-instances=1(상시 예열) | 인스턴스 1개를 항상 유지 | 콜드스타트 제거 대신 월 몇 달러 발생 |
 | Cloud Build | 빌드 분당 과금 | 무료 등급 월 120분. 재배포 몇 번은 무료 |
-| Anthropic API | 신고서·법적 가이드 생성 1건당 토큰 과금 | 사용자가 실제로 문서를 생성할 때만 발생 |
+| 내장 LLM(신고서 생성) | 별도 과금 없음(이미지 내장 오픈소스 모델, CPU 추론) | 요청당 vCPU 시간만 Cloud Run 과금에 포함(콜드 ~97s / 웜 ~48s) |
 | Google Vision | 이미지 1건당 | 무료 1,000건/월, 이후 1,000건당 약 $1.50 |
 
 정리: **호스팅 자체는 무료 등급 안에서 거의 0**이고, 실제 비용은 사용자가 AI 기능
