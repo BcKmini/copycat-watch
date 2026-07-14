@@ -67,7 +67,9 @@
 | 기능 | 설명 |
 |---|---|
 | **실시간 웹 검색** | Google Cloud Vision API로 인터넷 전체에서 동일/유사 이미지가 게시된 페이지를 찾는다 |
+| **다중 이미지 스캔** | 같은 상품을 여러 각도/배경으로 여러 장 올리면 각 후보를 모든 업로드 이미지와 대조해 최고 유사도를 취한다 (재현율↑, 최대 5장) |
 | **서버 실측 검증** | Vision이 준 후보를 그대로 믿지 않고, 서버가 이미지를 직접 내려받아 자체 유사도 알고리즘으로 재검증한다 (오탐 제거) |
+| **CLIP 의미적 유사도** | phash+colorhash가 놓치는 의미적 유사도(각도·배경·리터칭)를 CLIP(ViT-B/32) 임베딩으로 보강해 채택된 후보의 점수·정렬 품질을 높인다 (게이팅은 검증된 해시 기준 유지, 없으면 자동 폴백) |
 | **딥 페이지 검증** | 이미지 다운로드가 막힌 사이트는 페이지 HTML을 직접 방문해 `og:image`/본문 이미지를 추출해 대조한다 |
 | **중복 자동 제거** | 같은 글이 `http`/`https`, `www` 유무 등으로 여러 건 잡혀도 1건으로 병합한다 |
 | **피해액 자동 계산** | 판매가 기반으로 예상 피해 규모를 산정한다 |
@@ -121,7 +123,7 @@ flowchart TB
         Nginx["nginx<br/>정적 서빙 + /api 리버스 프록시"]
         subgraph Backend["FastAPI (uvicorn)"]
             API["API 라우터"]
-            Match["matching.py<br/>(phash + colorhash)"]
+            Match["matching.py<br/>(phash + colorhash)<br/>+ CLIP 블렌드(있을 때)"]
             LLM["내장 LLM (Cloud Run 전용)<br/>Qwen2.5-1.5B · llama.cpp<br/>지연 로딩 · 없으면 템플릿 폴백"]
         end
     end
@@ -176,6 +178,8 @@ flowchart TB
 ![Google Vision](https://img.shields.io/badge/Google_Cloud_Vision-Web_Detection-4285F4?style=flat-square&logo=googlecloud&logoColor=white)
 ![Qwen2.5](https://img.shields.io/badge/Qwen2.5--1.5B--Instruct-GGUF_Q4__K__M-6236FF?style=flat-square)
 ![llama-cpp-python](https://img.shields.io/badge/llama--cpp--python-0.3.2-000000?style=flat-square&logo=llama&logoColor=white)
+![CLIP](https://img.shields.io/badge/CLIP-ViT--B%2F32_(ONNX)-EE4C2C?style=flat-square)
+![onnxruntime](https://img.shields.io/badge/onnxruntime-1.20.1-005CED?style=flat-square&logo=onnx&logoColor=white)
 
 **인프라 · 테스트**
 
@@ -184,7 +188,7 @@ flowchart TB
 ![Kubernetes](https://img.shields.io/badge/Kubernetes_(k3d)-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-009639?style=flat-square&logo=nginx&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-20-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)
-![pytest](https://img.shields.io/badge/pytest-30_tests-0A9EDC?style=flat-square&logo=pytest&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-43_tests-0A9EDC?style=flat-square&logo=pytest&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-1.61-2EAD33?style=flat-square&logo=playwright&logoColor=white)
 
 > **AI 아키텍처 원칙** — 법 조항·금액·기한 같은 **법적 사실은 전부 코드 템플릿이 소유**하고,
@@ -202,13 +206,15 @@ copycat-watch/
 │
 ├── backend/                     # ── 백엔드 (FastAPI) ──────────────────
 │   ├── main.py                  #   API 엔드포인트 (/api/scan · report · legal-guide)
-│   ├── matching.py              #   유사도 매칭 알고리즘 (phash + colorhash)
+│   ├── matching.py              #   유사도 매칭 알고리즘 (phash + colorhash + CLIP 블렌드)
+│   ├── clip_sim.py              #   CLIP(ViT-B/32, ONNX) 의미적 유사도 · 없으면 폴백
 │   ├── llm.py                   #   로컬 LLM 신고서 다듬기 + 법적 사실 보존 가드
 │   ├── gen_demo_data.py         #   데모 데이터셋 생성 스크립트
 │   ├── demo_data/               #   상품 이미지 (원본 + 도용본 2장 세트)
-│   ├── tests/                   #   pytest 30개 (matching · api · llm 가드)
+│   ├── tests/                   #   pytest 43개 (matching · api · llm/clip 가드)
 │   ├── requirements.txt         #   프로덕션 의존성
 │   ├── requirements-llm.txt     #   로컬 LLM 의존성 (Cloud Run 이미지에서만 설치)
+│   ├── requirements-clip.txt    #   CLIP(onnxruntime) 의존성 (Cloud Run 이미지에서만 설치)
 │   ├── requirements-dev.txt     #   +pytest (개발용)
 │   └── Dockerfile               #   백엔드 단독 이미지 (로컬/k8s용)
 │
@@ -299,7 +305,7 @@ gcloud run deploy copycat-watch --source . --region asia-northeast3 \
 
 | 엔드포인트 | 설명 |
 |---|---|
-| `POST /api/scan` | 이미지 업로드 → 유사 이미지 스캔 (`mode: "web"` 또는 `"demo"`) |
+| `POST /api/scan` | 이미지 업로드(`file`, 최대 5장) → 유사 이미지 스캔 (`mode: "web"` 또는 `"demo"`) |
 | `GET /api/demo-image/{fname}` | 데모 매치 이미지 서빙 |
 | `POST /api/report` | 매치 1건에 대한 신고서 3종 생성 (플랫폼 자동 감지) |
 | `POST /api/report/batch` | 매치 여러 건을 묶은 통합 신고서 생성 |
@@ -313,8 +319,9 @@ gcloud run deploy copycat-watch --source . --region asia-northeast3 \
   0.737→0.962 개선 → 실시간 웹 검색 파이프라인 2단계 검증 → 표본 확대(91/104개) →
   현실적 도용 변형 5종(스크린샷·워터마크·재압축·썸네일·색보정)으로 재측정(41,405쌍,
   threshold=30에서 recall 0.976)까지의 과정과 수치를 전부 투명하게 공개.
-- **`backend/tests/`**: pytest 30개 — 정상 케이스뿐 아니라 손상된 파일, 초과 용량,
-  경로 탈출 시도, 완전히 다른 색의 단색 이미지 등 히든 엣지케이스를 커버.
+- **`backend/tests/`**: pytest 43개 — 정상 케이스뿐 아니라 손상된 파일, 초과 용량,
+  경로 탈출 시도, 완전히 다른 색의 단색 이미지, 다중 이미지 집계, CLIP 폴백 등
+  히든 엣지케이스를 커버.
 - **`frontend/drive.mjs`**: Playwright로 배포된 앱을 실제 헤드리스 브라우저에서
   클릭해가며 스크린샷으로 검증(라이트/다크모드, 신고서 작성, 뒤로가기 등).
 
