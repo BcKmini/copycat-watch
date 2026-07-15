@@ -289,6 +289,29 @@ def test_legal_guide_includes_detected_platform_channels(client, monkeypatch):
     assert "네이버 스마트스토어" in report
 
 
+def test_legal_guide_covers_various_platforms(client, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    resp = client.post(
+        "/api/legal-guide",
+        json={
+            "product_name": "P",
+            "total_matches": 4,
+            "verified_matches": 1,
+            "total_damage": 100000,
+            "matches": [
+                {"shop": "a", "source_url": "https://www.daangn.com/articles/1"},
+                {"shop": "b", "source_url": "https://www.tiktok.com/@x/video/1"},
+                {"shop": "c", "source_url": "https://ko.aliexpress.com/item/1.html"},
+                {"shop": "d", "source_url": "https://bunjang.co.kr/products/1"},
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    report = resp.json()["report"]
+    for p in ["당근마켓", "틱톡", "알리익스프레스", "번개장터"]:
+        assert p in report
+
+
 def test_batch_report_labels_platform_per_match(client, monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     resp = client.post(
