@@ -8,8 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from PIL import Image
 
-import clip_sim
-from matching import blend_similarity
+from ml import clip_sim
+from ml.matching import blend_similarity
 
 
 def test_blend_returns_hash_when_clip_absent():

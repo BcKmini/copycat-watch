@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from PIL import Image
 
-from matching import SIMILARITY_THRESHOLD, candidate_hashes, query_hashes, similarity_from_hashes
+from ml.matching import SIMILARITY_THRESHOLD, candidate_hashes, query_hashes, similarity_from_hashes
 
 
 def _sim(img_a, img_b):

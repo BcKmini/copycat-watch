@@ -16,7 +16,7 @@ import main
 
 @pytest.fixture(scope="module", autouse=True)
 def _load_demo_data():
-    main._load_demo_hashes()
+    main.load_demo_hashes()
 
 
 @pytest.fixture(autouse=True)
@@ -224,7 +224,7 @@ def test_dedupe_merges_same_page_different_scheme_and_www():
         _match("http://www.example.com/post/1"),
         _match("https://example.com/post/1/"),
     ]
-    result = main._dedupe_matches(matches)
+    result = main.dedupe_matches(matches)
     assert len(result) == 1
 
 
@@ -233,7 +233,7 @@ def test_dedupe_keeps_verified_over_unverified_duplicate():
         _match("https://example.com/post/1", sim=70.0, verified=False),
         _match("https://example.com/post/1", sim=70.0, verified=True),
     ]
-    result = main._dedupe_matches(matches)
+    result = main.dedupe_matches(matches)
     assert len(result) == 1
     assert result[0]["verified"] is True
 
@@ -244,7 +244,7 @@ def test_dedupe_keeps_distinct_pages():
         _match("https://example.com/post/2"),
         _match("https://another-site.com/post/1"),
     ]
-    result = main._dedupe_matches(matches)
+    result = main.dedupe_matches(matches)
     assert len(result) == 3
 
 
