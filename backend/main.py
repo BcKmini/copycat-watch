@@ -523,6 +523,28 @@ PLATFORM_SUBMISSION_GUIDE = {
     "옥션": "옥션 고객센터 지식재산권 침해 신고 페이지로 접수.",
 }
 
+def _platform_channels(pairs) -> str:
+    """(shop, source_url) 목록에서 감지된 플랫폼별 신고 채널을 건수와 함께 요약한다.
+    같은 상품이라도 발견된 플랫폼마다 접수처·절차가 다르므로 각 플랫폼을 나눠 안내한다."""
+    counts: dict[str, int] = {}
+    order: list[str] = []
+    for shop, url in pairs:
+        plat = _detect_platform(shop, url)
+        if plat not in counts:
+            counts[plat] = 0
+            order.append(plat)
+        counts[plat] += 1
+    lines = []
+    for plat in order:
+        guide = PLATFORM_SUBMISSION_GUIDE.get(
+            plat,
+            "해당 사이트 고객센터의 지식재산권·저작권 침해 신고 절차로 접수하고, "
+            "미해결 시 내용증명 발송 후 민형사 절차를 검토합니다.",
+        )
+        lines.append(f"- {plat} ({counts[plat]}건): {guide}")
+    return "\n".join(lines)
+
+
 @app.post("/api/report")
 def generate_report(req: ReportRequest):
     platform = req.platform or _detect_platform(req.match_shop, req.source_url)
@@ -588,7 +610,12 @@ def generate_batch_report(req: BatchReportRequest):
         raise HTTPException(400, "선택된 매치가 없습니다")
 
     total_damage = sum(m.estimated_damage or 0 for m in req.matches)
-    listing = "\n".join(f"  - {m.shop} (유사도 {m.similarity}%)" for m in req.matches)
+    # 각 침해 건에 발견된 플랫폼을 함께 표기한다(같은 상품이라도 플랫폼마다 접수처가 다름).
+    listing = "\n".join(
+        f"  - {m.shop} [{_detect_platform(m.shop, m.source_url)}] (유사도 {m.similarity}%)"
+        for m in req.matches
+    )
+    platform_block = _platform_channels([(m.shop, m.source_url) for m in req.matches])
     damage_text = _format_amount(total_damage) if total_damage else "산정 불가(판매 이력 확인 필요)"
     template = (
         "---문서1---\n"
@@ -608,10 +635,12 @@ def generate_batch_report(req: BatchReportRequest):
         "4. 위 기한 내 이행되지 않을 경우, 저작권법 위반에 따른 민형사상 법적 조치(고소 및 손해배상 청구 소송)를 "
         "진행할 수 있음을 알려드립니다.\n\n"
         "본 내용증명은 우체국 내용증명 우편으로 발송해 발신 사실과 도달을 증명하는 것을 권장합니다 "
-        "(총 3부 작성: 발신인 보관용 / 수신인 발송용 / 우체국 보관용)."
+        "(총 3부 작성: 발신인 보관용 / 수신인 발송용 / 우체국 보관용).\n\n"
+        "---문서3---\n"
+        f"[플랫폼별 신고 접수처]\n발견된 각 플랫폼의 신고 채널이 다르므로 아래 절차에 따라 개별 접수합니다.\n{platform_block}"
     )
 
-    report, ai_generated = refine_document(template, max_tokens=1800)
+    report, ai_generated = refine_document(template, max_tokens=2000)
     return {"report": report, "ai_generated": ai_generated}
 
 
@@ -626,12 +655,18 @@ LEGAL_RESOURCES = (
 )
 
 
+class GuideMatch(BaseModel):
+    shop: str = ""
+    source_url: str | None = None
+
+
 class LegalGuideRequest(BaseModel):
     product_name: str
     total_matches: int
     verified_matches: int
     total_damage: int = 0
     repeated_infringement: bool = False
+    matches: list[GuideMatch] = []
 
 
 @app.post("/api/legal-guide")
@@ -643,20 +678,45 @@ def generate_legal_guide(req: LegalGuideRequest):
         if req.total_damage and is_small_claim
         else "예상 피해액이 3,000만원을 초과하거나 산정되지 않아, 일반 민사소송 절차 검토가 필요합니다."
     )
-    template = (
-        "1. 우선순위 대응 순서\n"
-        "게시물 삭제가 급하다면 플랫폼 신고를 먼저 진행하고, 공식적인 경고와 증거 확보를 위해 "
-        "내용증명을 함께 발송하는 것이 일반적입니다. 이후에도 해결되지 않으면 민형사 절차를 검토합니다.\n\n"
-        "2. 민사/형사 대응 가능성\n"
-        "저작권법 제125조에 따라 침해자가 그 침해행위로 얻은 이익액을 저작재산권자의 손해액으로 "
-        "추정하여 손해배상을 청구할 수 있습니다. 사안에 따라 저작권법 위반으로 형사 고소도 가능합니다.\n\n"
-        f"3. 소송 형태 판단\n{claim_line}\n"
-        f"{'반복적/조직적 도용 정황이 확인되어 손해액이 커질 수 있으므로 정식 소송도 함께 검토해볼 만합니다.' if req.repeated_infringement else ''}\n\n"
-        f"4. 무료 법률 지원 연결처\n{LEGAL_RESOURCES}\n\n"
-        "5. 유의사항\n"
-        "본 가이드는 일반적인 절차 안내이며 구체적인 법률 자문이 아닙니다. "
-        "실제 진행 전 위 상담처를 통해 전문가 확인을 받으시길 권장합니다."
+    lawsuit_note = (
+        "\n반복적/조직적 도용 정황이 확인되어 손해액이 커질 수 있으므로 정식 소송도 함께 검토해볼 만합니다."
+        if req.repeated_infringement else ""
     )
+
+    # 이 상품이 발견된 플랫폼별 신고 채널(있을 때만). 상품·플랫폼에 따라 절차가 달라진다.
+    platform_block = _platform_channels([(m.shop, m.source_url) for m in req.matches])
+
+    intro = (
+        f"'{req.product_name}' 상품 이미지 도용 건에 대한 맞춤 대응 가이드입니다. "
+        f"현재까지 총 {req.total_matches}곳에서 도용이 의심되며, 이 중 {req.verified_matches}곳은 "
+        "서버 실측 검증을 통과했습니다.\n\n"
+    )
+
+    # 섹션을 순서대로 구성하고 자동으로 번호를 매긴다(플랫폼 섹션 유무에 따라 번호가 바뀜).
+    sections = [
+        ("우선순위 대응 순서",
+         "게시물 삭제가 급하다면 플랫폼 신고를 먼저 진행하고, 공식적인 경고와 증거 확보를 위해 "
+         "내용증명을 함께 발송하는 것이 일반적입니다. 이후에도 해결되지 않으면 민형사 절차를 검토합니다."),
+        ("민사/형사 대응 가능성",
+         "저작권법 제125조에 따라 침해자가 그 침해행위로 얻은 이익액을 저작재산권자의 손해액으로 "
+         "추정하여 손해배상을 청구할 수 있습니다. 사안에 따라 저작권법 위반으로 형사 고소도 가능합니다."),
+        ("소송 형태 판단", f"{claim_line}{lawsuit_note}"),
+    ]
+    if platform_block:
+        sections.append((
+            "발견된 플랫폼별 신고 채널",
+            "이 상품이 도용된 플랫폼마다 접수처·절차가 다릅니다. 아래를 참고해 각각 접수하세요.\n"
+            + platform_block,
+        ))
+    sections.append(("무료 법률 지원 연결처", LEGAL_RESOURCES))
+    sections.append((
+        "유의사항",
+        "본 가이드는 일반적인 절차 안내이며 구체적인 법률 자문이 아닙니다. "
+        "실제 진행 전 위 상담처를 통해 전문가 확인을 받으시길 권장합니다.",
+    ))
+
+    body = "\n\n".join(f"{i + 1}. {title}\n{content}" for i, (title, content) in enumerate(sections))
+    template = intro + body
 
     report, ai_generated = refine_document(template, max_tokens=1400)
     return {"report": report, "ai_generated": ai_generated}

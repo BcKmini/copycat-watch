@@ -266,6 +266,51 @@ def test_legal_guide_without_api_key_mentions_small_claims_threshold(client, mon
     assert "132" in data["report"]
 
 
+def test_legal_guide_includes_detected_platform_channels(client, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    resp = client.post(
+        "/api/legal-guide",
+        json={
+            "product_name": "수제 가죽 지갑",
+            "total_matches": 2,
+            "verified_matches": 2,
+            "total_damage": 500000,
+            "matches": [
+                {"shop": "쿠팡셀러", "source_url": "https://www.coupang.com/vp/products/1"},
+                {"shop": "스토어", "source_url": "https://smartstore.naver.com/x/y"},
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    report = resp.json()["report"]
+    assert "수제 가죽 지갑" in report            # 상품명 개요 반영
+    assert "발견된 플랫폼별 신고 채널" in report
+    assert "쿠팡" in report
+    assert "네이버 스마트스토어" in report
+
+
+def test_batch_report_labels_platform_per_match(client, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    resp = client.post(
+        "/api/report/batch",
+        json={
+            "product_name": "테스트 상품",
+            "matches": [
+                {"shop": "A상점", "note": "n", "similarity": 95.0,
+                 "source_url": "https://www.coupang.com/x", "estimated_damage": 50000},
+                {"shop": "B상점", "note": "n", "similarity": 88.0,
+                 "source_url": "https://www.instagram.com/y", "estimated_damage": 30000},
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    report = resp.json()["report"]
+    assert "[쿠팡]" in report            # 매치별 플랫폼 라벨
+    assert "인스타그램" in report
+    assert "플랫폼별 신고 접수처" in report
+    assert "문서3" in report
+
+
 def test_legal_guide_over_small_claims_threshold_suggests_regular_lawsuit(client, monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     resp = client.post(

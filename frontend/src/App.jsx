@@ -250,6 +250,7 @@ function App() {
           verified_matches: visibleMatches.filter((m) => m.verified).length,
           total_damage: totalDamage,
           repeated_infringement: visibleMatches.length >= 5,
+          matches: visibleMatches.map((m) => ({ shop: m.shop, source_url: m.source_url ?? null })),
         }),
       }, { timeoutMs: 300000, label: '법적 대응 가이드 생성' })
       const data = await res.json()
