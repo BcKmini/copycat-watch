@@ -2,4 +2,4 @@
 # torch 없이 onnxruntime(CPU)로 구동한다 → 경량. 미설치 환경에서는 clip_sim이
 # 자동으로 해시 전용 폴백으로 동작한다(로컬 개발/k3d는 설치하지 않아도 됨).
 # numpy는 imagehash 의존성으로 이미 설치돼 있어 별도 명시하지 않는다.
-onnxruntime==1.20.1
+onnxruntime==1.27.0
