@@ -48,9 +48,9 @@ async function apiFetch(url, options = {}, { timeoutMs = 180000, retries = 2, la
 const STEPS = ['상품 등록', '스캔 결과', '신고서 초안']
 
 const FEATURES = [
-  { title: '실시간 웹 검색', desc: 'Google Vision으로 인터넷 전체에서 유사 이미지를 찾아요' },
-  { title: '피해액 자동 계산', desc: '판매가 기반으로 예상 피해 규모를 산정해요' },
-  { title: 'AI 신고서 3종', desc: '사유서·내용증명·손해배상 청구서를 한번에' },
+  { title: '사진 업로드', desc: '상품 사진 한 장이면 충분해요 (여러 각도도 OK)' },
+  { title: 'AI가 웹 전체 스캔', desc: '도용 이미지를 찾아 서버가 직접 실측 대조해요' },
+  { title: '신고서 자동 작성', desc: '사유서·내용증명·손해배상 청구서를 즉시 생성해요' },
 ]
 
 function Spinner() {
@@ -523,18 +523,37 @@ function App() {
 
       {step === 1 && (
         <>
+          <section className="hero">
+            <span className="hero-eyebrow">소상공인을 위한 이미지 도용 대응 도구</span>
+            <h1 className="hero-title">
+              내 상품 사진, 어디서<br />
+              <span className="hero-highlight">무단 도용</span>되고 있을까요?
+            </h1>
+            <p className="hero-sub">
+              사진 한 장을 올리면 AI가 인터넷 전체에서 도용 사례를 찾아내고,
+              피해액 산정부터 법적 신고서 초안까지 한 번에 만들어 드려요.
+            </p>
+            <div className="hero-trust">
+              <span className="trust-chip"><b>실측 검증</b> 오탐 제거</span>
+              <span className="trust-chip"><b>3종</b> 법적 문서 자동 작성</span>
+              <span className="trust-chip"><b>무료</b> 법률상담처 안내</span>
+            </div>
+          </section>
+
           <ul className="feature-row">
             {FEATURES.map((f) => (
               <li key={f.title}>
-                <strong>{f.title}</strong>
-                <span>{f.desc}</span>
+                <div className="feat-text">
+                  <strong>{f.title}</strong>
+                  <span>{f.desc}</span>
+                </div>
               </li>
             ))}
           </ul>
 
           <section className="card">
-            <h2>내 상품 정보를 입력해줘</h2>
-            <p className="card-desc">사진 한 장이면 AI가 유사 이미지를 찾아 신고서까지 만들어줘요.</p>
+            <h2>내 상품 정보 입력</h2>
+            <p className="card-desc">상품명과 사진만 있으면 바로 시작할 수 있어요.</p>
 
             <label className="field">
               상품명
@@ -735,8 +754,8 @@ function App() {
           </p>
           {!reportAiGenerated && (
             <p className="ai-fallback-notice">
-              AI 없이 고정 템플릿으로 생성됐어요. <code>ANTHROPIC_API_KEY</code>를 설정하면
-              상황에 맞게 AI가 직접 작성해줘요.
+              검증된 템플릿으로 생성됐어요. AI 문장 다듬기가 안전 검증(법 조항·금액 보존)을
+              통과하지 못하면, 법적 정확성을 위해 원본 템플릿을 그대로 사용해요 — 내용과 효력은 동일해요.
             </p>
           )}
           <pre className="report-box">{report}</pre>
@@ -753,7 +772,10 @@ function App() {
         </section>
       )}
 
-      <footer className="app-footer">카피캣 워치</footer>
+      <footer className="app-footer">
+        카피캣 워치 · 이미지 도용 탐지 &amp; 법적 대응 자동화<br />
+        생성되는 문서는 참고용 초안이며, 법적 제출 전 전문가 검토를 권장합니다.
+      </footer>
 
       {compareMatch && (
         <div className="lightbox" onClick={() => setCompareMatch(null)}>
