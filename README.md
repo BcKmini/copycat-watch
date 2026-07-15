@@ -209,12 +209,12 @@ flowchart TB
 ![Kubernetes](https://img.shields.io/badge/Kubernetes_(k3d)-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
 ![nginx](https://img.shields.io/badge/nginx-009639?style=flat-square&logo=nginx&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-20-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)
-![pytest](https://img.shields.io/badge/pytest-43_tests-0A9EDC?style=flat-square&logo=pytest&logoColor=white)
+![pytest](https://img.shields.io/badge/pytest-46_tests-0A9EDC?style=flat-square&logo=pytest&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-1.61-2EAD33?style=flat-square&logo=playwright&logoColor=white)
 
 > **AI 아키텍처 원칙** — 법 조항·금액·기한 같은 **법적 사실은 전부 코드 템플릿이 소유**하고,
 > LLM은 그 완성본을 자연스러운 한국어로 '다시 쓰기'만 한다. 모델 출력은 조항·금액·문서 구분자
-> 보존 여부를 검증하는 가드([`backend/llm.py`](backend/llm.py))를 통과해야만 채택되며, 하나라도
+> 보존 여부를 검증하는 가드([`backend/ml/llm.py`](backend/ml/llm.py))를 통과해야만 채택되며, 하나라도
 > 어긋나면 원본 템플릿을 그대로 반환한다 → **환각이 최종 문서에 반영되지 않는다.**
 
 ## 디렉토리 구조
@@ -225,23 +225,26 @@ flowchart TB
 ```
 copycat-watch/
 │
-├── backend/                     # ── 백엔드 (FastAPI) ──────────────────
-│   ├── main.py                  #   API 엔드포인트 (/api/scan · report · legal-guide)
-│   ├── matching.py              #   유사도 매칭 알고리즘 (phash + colorhash + CLIP 블렌드)
-│   ├── clip_sim.py              #   CLIP(ViT-B/32, ONNX) 의미적 유사도 · 없으면 폴백
-│   ├── llm.py                   #   로컬 LLM 신고서 다듬기 + 법적 사실 보존 가드
+├── backend/                     # ── 백엔드 (FastAPI, 역할별 패키지) ────
+│   ├── main.py                  #   FastAPI 앱 + 라우터(엔드포인트 배선만)
+│   ├── core/                    #   config.py(상수) · money.py(금액 표기)
+│   ├── scan/                    #   scanning.py(파이프라인) · demo.py(데모셋)
+│   ├── reports/                 #   documents.py(신고서) · platforms.py(17종) · schemas.py
+│   ├── ml/                      #   matching.py(phash+colorhash) · clip_sim.py · llm.py
 │   ├── gen_demo_data.py         #   데모 데이터셋 생성 스크립트
 │   ├── demo_data/               #   상품 이미지 (원본 + 도용본 2장 세트)
-│   ├── tests/                   #   pytest 43개 (matching · api · llm/clip 가드)
-│   ├── requirements.txt         #   프로덕션 의존성
-│   ├── requirements-llm.txt     #   로컬 LLM 의존성 (Cloud Run 이미지에서만 설치)
-│   ├── requirements-clip.txt    #   CLIP(onnxruntime) 의존성 (Cloud Run 이미지에서만 설치)
-│   ├── requirements-dev.txt     #   +pytest (개발용)
+│   ├── tests/                   #   pytest 46개 (matching · api · 플랫폼 · llm/clip 가드)
+│   ├── requirements*.txt        #   의존성 (base / llm / clip / dev)
 │   └── Dockerfile               #   백엔드 단독 이미지 (로컬/k8s용)
 │
 ├── frontend/                    # ── 프론트엔드 (React SPA) ────────────
 │   ├── src/
-│   │   ├── App.jsx              #   전체 UI (상품등록 → 스캔결과 → 신고서)
+│   │   ├── App.jsx              #   상태·핸들러 오케스트레이터 (3단계 흐름)
+│   │   ├── api.js               #   API_BASE + 견고한 fetch 래퍼 (타임아웃·재시도)
+│   │   ├── constants.js         #   단계/작동방식 소개 상수
+│   │   ├── lib/                 #   유틸: format(이미지 URL·escape) · evidence(증거 리포트 HTML)
+│   │   ├── components/          #   Hero·FeatureRow·UploadStep·MatchCard·Lightbox·
+│   │   │                        #     ReportView·HistoryPanel·StepIndicator·Spinner
 │   │   └── App.css              #   디자인 시스템 (CSS 변수, 라이트/다크)
 │   ├── drive.mjs                #   Playwright 시각 검증 스크립트
 │   ├── vite.config.js           #   Vite 빌드 설정
@@ -344,7 +347,7 @@ gcloud run deploy copycat-watch --source . --region asia-northeast3 \
   0.737→0.962 개선 → 실시간 웹 검색 파이프라인 2단계 검증 → 표본 확대(91/104개) →
   현실적 도용 변형 5종(스크린샷·워터마크·재압축·썸네일·색보정)으로 재측정(41,405쌍,
   threshold=30에서 recall 0.976)까지의 과정과 수치를 전부 투명하게 공개.
-- **`backend/tests/`**: pytest 43개 — 정상 케이스뿐 아니라 손상된 파일, 초과 용량,
+- **`backend/tests/`**: pytest 46개 — 정상 케이스뿐 아니라 손상된 파일, 초과 용량,
   경로 탈출 시도, 완전히 다른 색의 단색 이미지, 다중 이미지 집계, CLIP 폴백 등
   히든 엣지케이스를 커버.
 - **`frontend/drive.mjs`**: Playwright로 배포된 앱을 실제 헤드리스 브라우저에서
