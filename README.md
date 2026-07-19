@@ -1,9 +1,15 @@
 <div align="center">
 
-# 카피캣 워치 (Copycat Watch)
+# 🔍 카피캣 워치 (Copycat Watch)
 
 **내 상품 사진이 어디서 무단 도용되고 있는지 AI가 실시간으로 찾아주고,<br/>
 신고서 초안까지 자동으로 써주는 웹 서비스.**
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-online-4285F4?style=flat-square&logo=googlecloud&logoColor=white)](https://copycat-watch-655097859028.asia-northeast3.run.app)
+[![CI/CD](https://img.shields.io/github/actions/workflow/status/BcKmini/copycat-watch/ci-cd.yml?branch=main&style=flat-square&label=CI%2FCD&logo=githubactions&logoColor=white)](https://github.com/BcKmini/copycat-watch/actions/workflows/ci-cd.yml)
+[![Tests](https://img.shields.io/badge/tests-46_passing-0A9EDC?style=flat-square&logo=pytest&logoColor=white)](backend/tests)
+[![Platforms](https://img.shields.io/badge/platforms_detected-17-orange?style=flat-square)](#작동-방식)
+[![License](https://img.shields.io/badge/license-unlicensed-lightgrey?style=flat-square)](#)
 
 <br/>
 
@@ -27,10 +33,7 @@
 
 <br/>
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-copycat--watch-4285F4?style=flat-square&logo=googlecloud&logoColor=white)](https://copycat-watch-655097859028.asia-northeast3.run.app)
-[![CI/CD](https://github.com/BcKmini/copycat-watch/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/BcKmini/copycat-watch/actions/workflows/ci-cd.yml)
-
-**상시 구동 데모 → https://copycat-watch-655097859028.asia-northeast3.run.app**
+**[Live Demo](https://copycat-watch-655097859028.asia-northeast3.run.app)** · **[배포 가이드](DEPLOY.md)** · **[정확도 실험 기록](EXPERIMENT.md)** · **[API](#api)**
 
 </div>
 
