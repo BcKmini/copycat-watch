@@ -4,5 +4,5 @@ python-multipart==0.0.9
 pillow==10.4.0
 imagehash==4.3.2
 httpx==0.28.1
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 requests==2.34.2
