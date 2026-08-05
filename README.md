@@ -4,44 +4,26 @@
 
 **내 상품 사진이 어디서 무단 도용되고 있는지 AI가 실시간으로 찾아주고,<br/>
 신고서 초안까지 자동으로 써주는 웹 서비스.**
+<p align="center">
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-online-4285F4?style=flat-square&logo=googlecloud&logoColor=white)](https://copycat-watch-655097859028.asia-northeast3.run.app)
-[![CI/CD](https://img.shields.io/github/actions/workflow/status/BcKmini/copycat-watch/ci-cd.yml?branch=main&style=flat-square&label=CI%2FCD&logo=githubactions&logoColor=white)](https://github.com/BcKmini/copycat-watch/actions/workflows/ci-cd.yml)
-[![Tests](https://img.shields.io/badge/tests-46_passing-0A9EDC?style=flat-square&logo=pytest&logoColor=white)](backend/tests)
-[![Platforms](https://img.shields.io/badge/platforms_detected-17-orange?style=flat-square)](#작동-방식)
-[![License](https://img.shields.io/badge/license-unlicensed-lightgrey?style=flat-square)](#)
+[![Demo](https://img.shields.io/badge/Demo-Live-4285F4?style=flat-square&logo=googlecloud&logoColor=white)](https://copycat-watch-655097859028.asia-northeast3.run.app)
+[![CI](https://img.shields.io/github/actions/workflow/status/BcKmini/copycat-watch/ci-cd.yml?branch=main&style=flat-square&label=CI)](https://github.com/BcKmini/copycat-watch/actions/workflows/ci-cd.yml)
+![Tests](https://img.shields.io/badge/Tests-46_Passing-0A9EDC?style=flat-square)
+![Platforms](https://img.shields.io/badge/Platforms-17-orange?style=flat-square)
 
-<br/>
-
-<!-- 언어 · 런타임 -->
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-20-5FA04E?style=flat-square&logo=nodedotjs&logoColor=white)
 
-<!-- 프레임워크 -->
-![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-8.1-646CFF?style=flat-square&logo=vite&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)
-![Uvicorn](https://img.shields.io/badge/Uvicorn-0.30-2094F3?style=flat-square&logo=gunicorn&logoColor=white)
-
-<!-- 인프라 · AI -->
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white)
-![Kubernetes](https://img.shields.io/badge/Kubernetes_(k3d)-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
-![Cloud Run](https://img.shields.io/badge/Google_Cloud_Run-4285F4?style=flat-square&logo=googlecloud&logoColor=white)
-![nginx](https://img.shields.io/badge/nginx-009639?style=flat-square&logo=nginx&logoColor=white)
-![llama.cpp](https://img.shields.io/badge/llama.cpp-Qwen2.5--1.5B-000000?style=flat-square&logo=llama&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/k3d-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
+![Cloud Run](https://img.shields.io/badge/Cloud_Run-4285F4?style=flat-square&logo=googlecloud&logoColor=white)
+![Qwen2.5-1.5B](https://img.shields.io/badge/Qwen2.5--1.5B-000000?style=flat-square)
 
-<br/>
+</p>
 
-**[Live Demo](https://copycat-watch-655097859028.asia-northeast3.run.app)** · **[배포 가이드](DEPLOY.md)** · **[정확도 실험 기록](EXPERIMENT.md)** · **[API](#api)**
-
-</div>
-
-> 로컬 실행은 [빠르게 실행해보기](#빠르게-실행해보기), 클라우드 배포는 [`DEPLOY.md`](DEPLOY.md) 참고.
-
----
-
-## 목차
+# 목차
 
 - [문제 정의](#문제-정의)
 - [핵심 기능](#핵심-기능)
